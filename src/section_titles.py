@@ -92,7 +92,7 @@ def is_heading(str):
     threshold = titlecase_threshold(str)
     firstword = sentences.firstword(str)
     # Initial qualification
-    possible = (len(str) > 4 and not '\n' in str and threshold <= 1 and\
+    possible = (threshold <= 1 and not '\n' in str and\
                 not anyMarker_re.search(str) and not amen_re.search(str) and\
                 (firstword.isupper() or isCapitalized(firstword)) and\
                 not quotes.partialQuote(str) and\
@@ -109,7 +109,7 @@ def is_heading(str):
 # based on characteristics of the string.
 # Assumes that the specified string has already been stripped of leading and trailing white space.
 def titlecase_threshold(str):
-    if not str:
+    if not str or len(str) < 5:
         adj = 2
     else:
         adj = 0.51
@@ -122,10 +122,11 @@ def titlecase_threshold(str):
             adj += 0.01 * (len(str) - 40)
         if str.startswith('(') and str.endswith(')'):
             adj -= 0.03
-        if str[-1] in ".\u0964\u1361\u1362":    # sentence ending punctuation
-            adj += 0.03
-        elif str[-1] in "!?,;":
-            adj = 1.1
+        for i in range(len(str)-3,len(str)):
+            if str[i] in ".\u0964\u1361\u1362":    # sentence ending punctuation
+                adj += 0.03
+            elif str[i] in "!?,;":
+                adj = 1.1
         if not isCapitalized(lastword(str)):
             adj += 0.24
     return adj
