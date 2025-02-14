@@ -339,20 +339,24 @@ def mark_sections(line):
         mark_sections.verse = v.group(1)
 
     changed = False
+    pheading = None
     if section_titles.is_heading(line):
         if mark_sections.verse == "0" or mark_sections.prevline.strip() == '' or mark_sections.sentenceended:
-            line = "\\s " + line.lstrip()
-            changed = True
-    if not changed:
-        if pheading := section_titles.find_parenthesized_heading(line):
-            startpos = line.find(pheading)
-            endpos = startpos + len(pheading)
-            assert startpos >= 0 and endpos <= len(line)
-            line = section_titles.insert_heading(line[0:startpos], pheading.strip('() \n'), line[endpos:])
-            changed = True
+            pheading = line.lstrip()
+    if not pheading:
+        pheading = section_titles.find_parenthesized_heading(line)
+    if not pheading and sentences.sentenceCount(line) > 1:
+        pheading = section_titles.find_eol_heading(line)
+
+    if pheading:
+        startpos = line.find(pheading)
+        endpos = startpos + len(pheading)
+        assert startpos >= 0 and endpos <= len(line)
+        line = section_titles.insert_heading(line[0:startpos].rstrip('( '), pheading.strip('() \n'), line[endpos:])
+        changed = True
 
     mark_sections.prevline = line
-    mark_sections.sentenceended = sentences.endsSentence(line, checkquotes=True)
+    mark_sections.sentenceended = changed or sentences.endsSentence(line, checkquotes=True)
     return (changed, line)
 
 # Rewrites the file line by line, making changes to individual lines
