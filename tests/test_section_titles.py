@@ -23,7 +23,7 @@ import pytest
      ('(Newline In\nParenthesized Heading)', False),
      ('(Newline Ends Parenthesized Heading\n)', False),
      ('.;-%  ', False),
-     ('" Sentence With Quotes"  ', False),
+     ('" Quoted Sentence"  ', False),
      ('A sentence XYZ; a phrase!A sentence-dash?    Another sentence  ', False),
      ('\\v 3 Verse Three.', False),
      ('', False),
@@ -44,7 +44,7 @@ import pytest
      ('First A Title. Then not a title', False),
      ('This is a Ten Word Candidate with Seven Capitalized Words', True),
      ('This is a Ten Word Candidate with Seven Capitalized Wordsssssss', False),
-     ('First and last Words', False),   # I would like for this to be True, but Lamboya's Matthew 1 doesn't.
+     ('First and last Words', False),   # I would like for this to be True, but Lamboya's Matthew 1 doesn't. Err on the side of not marking sections.
      ('First and Third words', False),
      ("Tutge Hanuwa Wadeka monno Kama'kna Ammaha", True),
      ('Amenee', False),
@@ -59,9 +59,10 @@ import pytest
         ('"Embedded "Quote', False),
         ('"Look, "At This."', False),
         ('They Said, "At this', False),
-        ('Single Quotes\' Don\'t Count as Internal \'Quotes', True),
+        ("Single Quotes Don't Count'as Internal Quotes", True),
         ('Parens At (End)', True),
         ('Olukaado Lw’omuyofu N’amamera', True),
+        ("Okhuwoniya Khwomusaacha Muwofwu E'Besusaida", True),
     ])
 def test_is_heading(str, expected):
     import section_titles
@@ -130,14 +131,14 @@ def test_find_parenthesized_heading(str, expected):
      ("Tutge Hanuwa Wadeka monno Kama'kna Ammaha", 5/6),
      ('Amenee', 1),
         ('“Phrase Quoted" ', 1),
-        ('End Quote\'', 1),
+        ("End Quote'", 0.5),
         ('\n‘"', 0),
         ('....,;Asdf-no Quotes!', 0.5),
         ('  « Begins A Quote.', 3/4),
         ('Embedded "Quote"', 1),
         ('"Look, "At This."', 1),
         ('They Said, "At this', 3/4),
-        ('Single Quotes\' Don\'t Count as Internal \'Quotes', 6/7)
+        ('Single Quotes\' Don\'t Count as Internal \'Quotes', 4/7)
     ])
 def test_percentTitleCase(str, expected):
     import section_titles
@@ -147,13 +148,20 @@ def test_percentTitleCase(str, expected):
     [('N’amamera', True),
      ('text', False),
      ('5', False),
-     ('Two Words', True),
      (None, False),
      ('(Parenthesized)', True),
      ('', False),
      ('.;-%  ', False),
      ('"Quotes"', True),
      ("Paul's", True),
+     ("E'Besusaida", True),
+     ("Syo’mufwire", True),
+     ("syo’Mufwire", False),
+     ("Syo’muFwire", False),
+     ("Syo’MUFWIRE", False),
+     (" E'siwanwa Syo’Mufwire'lower", False),   # isCapitalized does not support phrases
+     ("'Quoted", False),
+     ("Endquoted'", False),
     ])
 def test_isCapitalized(str, expected):
     import section_titles
