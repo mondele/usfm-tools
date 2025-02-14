@@ -157,33 +157,34 @@ def test_usfm_add_p(str, expected):
 @pytest.mark.parametrize('line, expected',
     [
        # the order of these tests is important because mark_sections() is context sensitive
-    ('text at start of line', ''),
-    ('   Space at Start of Line   ', '\\s Space at Start of Line   '),
-    ('\\c 1 \\v 1 asdf', ''),
-    ('Text at start of line', ''),  # after verse 1, the rules change
-    ('\\c 2 unexpected text', ''),
-    ('Looks Like A Title', '\\s Looks Like A Title'),
-    ('\\v 1 Part of a verse', ''),
-    ('Looks Like A Title', ''),
-    ('the rest of the verse.', ''),
-    ('Looks Like A Title', '\\s Looks Like A Title'),
-    ('\v 2 Part of a verse', ''),
-    ('  ', '  '),
-    ('Looks Like A Title', '\\s Looks Like A Title'),
+    ('text at start of line\n', ''),
+    ('   Space at Start of Line   \n', '\\s Space at Start of Line\n\\p\n'),
+    ('\\c 1 \\v 1 asdf\n', ''),
+    ('Text at start of line\n', ''),  # after verse 1, the rules change
+    ('\\c 2 unexpected text\n', ''),
+    ('Looks Like A Title\n', '\\s Looks Like A Title\n\\p\n'),
+    ('\\v 1 Part of a verse\n', ''),
+    ('Looks Like A Title\n', ''),
+    ('the rest of the verse.\n', ''),
+    ('Looks Like A Title\n', '\\s Looks Like A Title\n\\p\n'),
+    ('\v 2 Part of a verse\n', ''),
+    ('  \n', ''),
+    ('Looks Like A Title\n', '\\s Looks Like A Title\n\\p\n'),
     ('', ''),
-    ('Amini!', ''),
-    ('blah\\s Heading\n\n\n\\v 1', ''),     # \n should never occur
-    ('end of verse. (Probable Heading)', 'end of verse.\n\\s Probable Heading\n\\p'),
-    ('end of verse. (Ends with Period.)', ''),
-    ('end of verse. (not a heading) ', ''),
-    ('Do not mark (Parenthesized Words) in the middle of a sentence as a title.', ''),
-    ('middle of verse (Paul) continue', ''),
-    ('middle of verse (Peter).', ''),
-    ('middle of verse (Mary Peter Paul).', ''),
-    ('end of line (Mary Peter Paul)', 'end of line\n\\s Mary Peter Paul\n\\p'),
-    ('end of line (One Two Three) with more', ''),
-    ('\\s Heading\n\\p\n\\v 2 asdf', ''),   # should never occur
-    ('(Newline \n Mid Sentence)', ''),   # should never occur
+    ('Amini!\n', ''),
+    ('blah\\s Heading\n\n\n\\v 1\n', ''),     # \n should never occur
+    ('end of verse. (Probable Heading)\n', 'end of verse.\n\\s Probable Heading\n\\p\n'),
+    ('end of verse. (Ends with Period.)\n', 'end of verse.\n\\s Ends with Period.\n\\p\n'),  # qualifies by virtue of being the last sentence in the line, not because of parens
+    ('end of verse. (not a heading) \n', ''),
+    ('Do not mark (Parenthesized Words) in the middle of a sentence as a title.\n', ''),
+    ('middle of verse (Paul) continue\n', ''),
+    ('middle of verse (Peter).\n', ''),
+    ('middle of verse (Mary Peter Paul).\n', ''),
+    ('end of line (Mary Peter Paul)\n', 'end of line\n\\s Mary Peter Paul\n\\p\n'),
+    ('end of line (One Two Three) with more\n', ''),
+    ('\\s Heading\n\\p\n\\v 2 asdf\n', ''),   # should never occur
+    ('(Newline \n Mid Sentence)\n', ''),   # should never occur
+    ('some words. Then A Heading\n', 'some words.\n\\s Then A Heading\n\\p\n'),
     # (' Matutra Tutge Puasa (Mat. 9:14-17; Luk. 5:33-39)', '\\s Matutra Tutge Puasa (Mat. 9:14-17; Luk. 5:33-39)\n\\p'),
     ])
 def test_mark_sections(line, expected):
