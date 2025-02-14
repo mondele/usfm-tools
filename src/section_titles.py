@@ -38,17 +38,22 @@ def consider_parens(consider=True):
     global expect_parens
     expect_parens = consider
 
+# Intended for single words, and may not work correctly for phrases.
 # Differs from str.istitle() in how apostrophes are treated.
 # Considered numbers to be uncapitalized words.
 # istitle("Paul's") returns False.
 # isCapitalized("Paul's") returns True.
+# Hyphenated words like E'Besusaida return True if both parts are capitalized.
 def isCapitalized(word):
     if not word:
         result = False
     else:
-        word = word.replace("'", "")
-        word = word.replace("’", "")
-        result = word.istitle()
+        strings = re.split("['’]", word)
+        result = strings[0].istitle()
+        if result:
+            for i in range(1,len(strings)):
+                if not (strings[i].islower() or strings[i].istitle()):
+                    result = False
     return result
 
 # Returns the fraction of words in the string which are title case.
@@ -78,8 +83,20 @@ def find_parenthesized_heading(line):
                 break
     return pheading
 
+# Returns likely heading at end of line.
+# Returns None if heading is found at end of line.
+def find_eol_heading(line):
+    candidate = None
+    sentence_starts = [pos for pos in sentences.nextstartpos(line)]
+    if len(sentence_starts) > 0:
+        startpos = sentence_starts[-1]
+        if is_heading(line[startpos:]):    # last "sentence" in the line
+            candidate = line[startpos:]
+    return candidate
+
 anyMarker_re = re.compile(r'\\[a-z]+[a-z1-5]* ?[0-9]*')
 amen_re = re.compile(r'Am[ei]n')
+forbidden_re = re.compile(r'["“‘‹«”›»]')
 
 # Returns True if the string looks like a section heading.
 # Any backslash markers or quote marks in the string disqualify it.
@@ -95,7 +112,8 @@ def is_heading(str):
     possible = (threshold <= 1 and not '\n' in str and\
                 not anyMarker_re.search(str) and not amen_re.search(str) and\
                 (firstword.isupper() or isCapitalized(firstword)) and\
-                not quotes.partialQuote(str) and\
+                # not quotes.partialQuote(str) and\
+                not forbidden_re.search(str) and\
                 sentences.sentenceCount(str) == 1)
     if possible and not confirmed and expect_allcaps:
         confirmed = str.isupper()
@@ -113,11 +131,10 @@ def titlecase_threshold(str):
         adj = 2
     else:
         adj = 0.51
-        quotepos = quotes.quotepos(str)
-        if quotepos >= 0:
-            adj = 0.66 if str[quotepos] in "'’" else 1.5
+        if str[-1] == "'" or str[-1] == "’":
+            adj = 1.1
         if ',' in str:
-            adj += 0.05
+            adj += 0.16
         if len(str) > 40:
             adj += 0.01 * (len(str) - 40)
         if str.startswith('(') and str.endswith(')'):
@@ -126,7 +143,7 @@ def titlecase_threshold(str):
             if str[i] in ".\u0964\u1361\u1362":    # sentence ending punctuation
                 adj += 0.03
             elif str[i] in "!?,;":
-                adj = 1.1
+                adj = 1.2
         if not isCapitalized(lastword(str)):
             adj += 0.24
     return adj
@@ -140,8 +157,6 @@ def insert_heading(preheading, heading, postheading):
     preheading = preheading.rstrip()
     if preheading:
         preheading += '\n'
-    postheading = postheading.lstrip()
-    if postheading:
-        postheading = '\n' + postheading
+    postheading = '\n' + postheading.lstrip()
     section = preheading + "\\s " + heading.strip() + "\n\\p" + postheading
     return section
