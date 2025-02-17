@@ -84,7 +84,7 @@ def find_parenthesized_heading(line):
     return pheading
 
 # Returns likely heading at end of line.
-# Returns None if heading is found at end of line.
+# Returns None if no heading is found at end of line.
 def find_eol_heading(line):
     candidate = None
     sentence_starts = [pos for pos in sentences.nextstartpos(line)]
@@ -141,7 +141,7 @@ def titlecase_threshold(str):
             adj -= 0.03
         for i in range(len(str)-3,len(str)):
             if str[i] in ".\u0964\u1361\u1362":    # sentence ending punctuation
-                adj += 0.03
+                adj += 0.16
             elif str[i] in "!?,;":
                 adj = 1.2
         if not isCapitalized(lastword(str)):
