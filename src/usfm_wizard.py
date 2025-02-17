@@ -38,7 +38,7 @@ from usx2usfm import main
 from verifyManifest import main
 from word2text import main
 
-app_version = "1.3.2"
+app_version = "1.3.3"
 
 class UsfmWizard(tkinter.Tk):
     def __init__(self):
@@ -48,7 +48,7 @@ class UsfmWizard(tkinter.Tk):
         self.config = configmanager.ToolsConfigManager()
         mainframe = Frame(self, height=550, width=840)
         mainframe.grid(column=0, row=0, sticky="nsew")
-        
+
         self.titleframe = Title_Frame(parent=mainframe)
         self.titleframe.grid(row=0, column=0, sticky="nsew")
         self.buttonsframe = Buttons_Frame(parent=mainframe)
@@ -237,7 +237,7 @@ class Buttons_Frame(Frame):
             if tip:
                 buttonTip = Hovertip(self.button[psn], hover_delay=500, text=tip)
 
-    def hide(self, psn): 
+    def hide(self, psn):
         try:
             self.button[psn].grid_remove()
         except:

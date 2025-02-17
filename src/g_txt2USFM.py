@@ -36,8 +36,11 @@ class Txt2USFM(g_step.Step):
 
     # Called by the main app.
     def onScriptEnd(self, status: str):
-        if not status:
-            status = f"The conversion is done.\nAdvance to USFM verification and cleanup."
+        if not status:  # the normal case
+            if self.values.get('section_headings', fallback = False):
+                status = f"Some section titles may not have met all the criteria to be marked. Manual checks are still required."
+                self.frame.show_progress(status)
+            status = f"The conversion from txt to USFM is done."
         self.frame.show_progress(status)
         self.frame.onScriptEnd()
 
@@ -78,11 +81,11 @@ class Text2USFM_Frame(g_step.Step_Frame):
         target_dir_find.grid(row=5, column=4, sticky=W)
 
         # text=r'Has section headings'
-        headings_checkbox = ttk.Checkbutton(self, text=r'(For future use) ', variable=self.headings,
+        headings_checkbox = ttk.Checkbutton(self, text=r'Has section headings', variable=self.headings,
                                              onvalue=True, offvalue=False)
         headings_checkbox.grid(row=6, column=1, sticky=W)
         headings_Tip = Hovertip(headings_checkbox, hover_delay=500,
-             text=r"(FOR FUTURE USE) Does the translation include section headings?")
+                text="Does the translated text include section headings?")
 
         language_code_entry.focus()
 

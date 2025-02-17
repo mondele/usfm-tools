@@ -1,9 +1,26 @@
 # UsfmWizard Version history
 
+## 1.3.3
+* txt2usfm - optionally, mark section headings
+* usfm_cleanup - improve section heading markup
+* fix rare wizard startup bug
+* verifyUsfm - handle character encoding exceptions
+
+## 1.3.2
+* Bug fixes
+* txt2usfm - don't overwrite the projects and contributors lists on single book conversions.
+* verifyUsfm - ignore most numbering issues in intro paragraphs.
+* verifyUsfm - report section headings not followed by paragraph mark.
+* usfm_cleanup - ensure \p mark after section headings.
+* usfm_cleanup - punctuation, spacing improvements.
+* word2text - handle more file name variations.
+
 ## 1.3.1
 * Make check for mixed case words optional.
 * usfm_cleanup - ensure space before left paren
-* usfm_cleanup - make section title recognition optional.
+
+
+ * usfm_cleanup - make section title recognition optional.
 
 ## 1.3 - 9/4/24
 * Add Usx-to-Usfm conversion process.

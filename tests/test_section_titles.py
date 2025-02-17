@@ -112,6 +112,14 @@ def test_find_parenthesized_heading(str, expected):
     import section_titles
     assert section_titles.find_parenthesized_heading(str) == expected
 
+@pytest.mark.parametrize('line, expected',
+    [('', None),
+     ('Hukum Taurat wan kitab para nabi. Lalah Baampah Kahidupan', 'Lalah Baampah Kahidupan'),
+    ])
+def test_find_eol_heading(line, expected):
+    import section_titles
+    assert section_titles.find_eol_heading(line) == expected
+
 @pytest.mark.parametrize('str, expected',
     [('Sentence 1. Sentence 2.', 0.5),
      ('numbers 1 2', 0),
