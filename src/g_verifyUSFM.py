@@ -41,7 +41,7 @@ class VerifyUSFM(g_step.Step):
         self.mainapp.execute_script("verifyUSFM", count)
         self.frame.clear_messages()
         self.executed = True
-    
+
     def executeInventoryLabels(self, folder):
         self.mainapp.execute_script("inventory_chapter_labels", 0)
         self.frame.clear_messages()
@@ -76,7 +76,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         std_titles_helper.grid(row=3, column=5, sticky=W)
         helper_Tip = Hovertip(std_titles_helper, hover_delay=500,
             text="Inventory existing chapter labels")
-        
+
         source_dir_label = ttk.Label(self, text="Location of .usfm files:", width=20)
         source_dir_label.grid(row=4, column=1, sticky=W, pady=2)
         source_dir_entry = ttk.Entry(self, width=41, textvariable=self.source_dir)
@@ -96,7 +96,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         compare_dir_entry = ttk.Entry(self, width=41, textvariable=self.compare_dir)
         compare_dir_entry.grid(row=6, column=2, columnspan=3, sticky=W)
         cmp_Tip = Hovertip(compare_dir_entry, hover_delay=500,
-             text="The source text used for this translation. (Optional - for finding untranslated verses)")
+             text="The source text used for this translation. (Optional - to find untranslated verses)")
         cmp_dir_find = ttk.Button(self, text="...", width=2, command=self._onFindCmpDir)
         cmp_dir_find.grid(row=6, column=4, sticky=W)
 
@@ -140,25 +140,25 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         self.suppress7_checkbox.grid(row=12, column=3, sticky=W)
         suppress7_Tip = Hovertip(self.suppress7_checkbox, hover_delay=500,
              text=r"Suppress warnings about straight single quotes  (report straight double quotes only)")
-        
+
         suppress8_checkbox = ttk.Checkbutton(self, text=r'Book titles', variable=self.suppress[8],
                                              onvalue=True, offvalue=False)
         suppress8_checkbox.grid(row=12, column=4, sticky=W)
         suppress8_Tip = Hovertip(suppress8_checkbox, hover_delay=500,
              text=r"Suppress warnings about UPPER CASE BOOK TITLES")
-        
+
         self.suppress9_checkbox = ttk.Checkbutton(self, text=r'ASCII content', variable=self.suppress[9],
                                              onvalue=True, offvalue=False)
         self.suppress9_checkbox.grid(row=13, column=1, sticky=W)
         suppress9_Tip = Hovertip(self.suppress9_checkbox, hover_delay=500,
              text=r"Suppress warnings about ASCII content")
-        
+
         suppress10_checkbox = ttk.Checkbutton(self, text=r'Capitalization', variable=self.suppress[10],
                                              onvalue=True, offvalue=False)
         suppress10_checkbox.grid(row=13, column=2, sticky=W)
         suppress10_Tip = Hovertip(suppress10_checkbox, hover_delay=500,
              text=r'Suppress "First word not capitalized" warnings; report totals only')
-        
+
         suppress11_checkbox = ttk.Checkbutton(self, text=r'Paragraph termination', variable=self.suppress[11],
                                              onvalue=True, offvalue=False)
         suppress11_checkbox.grid(row=13, column=3, sticky=W)
