@@ -331,9 +331,9 @@ def mark_section_heading_eos(section):
             startpos -= 1
             candidate = section_titles.find_parenthesized_heading(section)
             candidate = remove_parens(candidate)
-        if not candidate:
-            candidate = section[startpos:]
-        if section_titles.is_heading(candidate):    # last "sentence" in the line
+        else:
+            candidate = section[startpos:]  # last "sentence" in the line
+        if candidate and section_titles.is_heading(candidate):
             section = section_titles.insert_heading(section[0:startpos], candidate, "")
     return section
 

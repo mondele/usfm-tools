@@ -70,7 +70,8 @@ def percentTitlecase(str):
 # bphrase_re = re.compile(r'\{[\s]*([\w\- ]+)[\s]*\}')
 pphrase_re = re.compile(r'\([\s]*([\w\- ]+)[\s]*\)\s*$', re.MULTILINE)
 
-# Returns that portion of the specified line that is most likely a heading,
+# Returns that portion of the specified line that is most likely a heading.
+# A single word in parentheses fails the test.
 # Returns None if no parenthesized heading is found.
 def find_parenthesized_heading(line):
     pheading = None
@@ -97,6 +98,7 @@ def find_eol_heading(line):
 anyMarker_re = re.compile(r'\\[a-z]+[a-z1-5]* ?[0-9]*')
 amen_re = re.compile(r'Am[ei]n')
 forbidden_re = re.compile(r'["“‘‹«”›»]')
+singleWordInParens_re = re.compile(r'\(\s*\w+\s*\)')
 
 # Returns True if the string looks like a section heading.
 # Any backslash markers or quote marks in the string disqualify it.
@@ -114,6 +116,7 @@ def is_heading(str):
                 (firstword.isupper() or isCapitalized(firstword)) and\
                 # not quotes.partialQuote(str) and\
                 not forbidden_re.search(str) and\
+                not singleWordInParens_re.match(str) and\
                 sentences.sentenceCount(str) == 1)
     if possible and not confirmed and expect_allcaps:
         confirmed = str.isupper()

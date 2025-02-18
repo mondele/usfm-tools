@@ -48,7 +48,6 @@ import pytest
      ('First and Third words', False),
      ("Tutge Hanuwa Wadeka monno Kama'kna Ammaha", True),
      ('Amenee', False),
-     ('Amenee', False),
         ('“Phrase Quoted" ', False),
         ('End Quote\'', False),
         ('\n‘"', False),
@@ -63,6 +62,8 @@ import pytest
         ('Parens At (End)', True),
         ('Olukaado Lw’omuyofu N’amamera', True),
         ("Okhuwoniya Khwomusaacha Muwofwu E'Besusaida", True),
+        ('(Single).', False),
+        ('(Single)', False),
     ])
 def test_is_heading(str, expected):
     import section_titles
@@ -104,9 +105,12 @@ def test_is_heading(str, expected):
         ('middle of verse (Peter).', None),
         ('middle of verse (Mary Peter Paul).', None),
         ('(Anything But White Space) after the closing paren disqualifies it', None),
-    ('but (White Space Is Okay) \nNext line', '(White Space Is Okay)'),
+        ('but (White Space Is Okay) \nNext line', '(White Space Is Okay)'),
         ('end of line (Mary Peter Paul)', '(Mary Peter Paul)'),
         ('end of line (One Two Three) with more', None),
+        ('(Single).', None),
+        ('(Single)', None),
+        ('\\v 2 some sentence. (Oneword)', None)
     ])
 def test_find_parenthesized_heading(str, expected):
     import section_titles

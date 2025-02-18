@@ -172,7 +172,10 @@ def test_mark_section_heading_lbi_2(str, expected):
         ('\\c 7 Sane Possibility.', '\\c 7\n\\s Sane Possibility.\n\\p\n'),
         ('\\c 3\n\\s Heading Already Marked\n\\p\n\\v 3 ', ''),
         ('\\v 4 Is a verse. Could Be a \\ Heading', '\\v 4 Is a verse.\n\\s Could Be a \\ Heading\n\\p\n'),
-        ('at the end of a verse. Amen.', '')
+        ('at the end of a verse. Amen.', ''),
+        ('\\v 5 Kiru YâkoboEsepo. (Christ).', ''),
+        ('\\v 6 Kiru YâkoboEsepo! (Jesus Christ).', ''),
+        ('\\v 7 Kiru YâkoboEsepo? (Jesus Christ)', '\\v 7 Kiru YâkoboEsepo?\n\\s Jesus Christ\n\\p\n'),
     ])
 # Call mark_section_headings() with the lastchunk parameter False
 def test_mark_section_headings_1(str, newstr):
