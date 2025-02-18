@@ -37,7 +37,7 @@ class Txt2USFM(g_step.Step):
     # Called by the main app.
     def onScriptEnd(self, status: str):
         if not status:  # the normal case
-            if self.values.get('section_headings', fallback = False):
+            if self.values.getboolean('section_headings', fallback = False):
                 status = f"Some section titles may not have met all the criteria to be marked. Manual checks are still required."
                 self.frame.show_progress(status)
             status = f"The conversion from txt to USFM is done."
