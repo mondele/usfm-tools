@@ -50,6 +50,7 @@ import usfm_utils
 import sentences
 import section_titles
 from datetime import date
+from datetime import datetime
 
 # Item categories
 PP = 1      # paragraph or quote
@@ -363,6 +364,13 @@ def shortname(longpath):
         shortname = shortname.relative_to(workdir)
     return str(shortname)
 
+# Returns the modified date/time of the specified file, formatted as a string.
+def get_timestamp(path):
+    mtime = os.path.getmtime(path)
+    dt = datetime.fromtimestamp(mtime)
+    s = dt.strftime("%Y%m%d%H%M")
+    return s[2:]
+
 # If issues.txt file is not already open, opens it for writing.
 # First renames existing issues.txt file to issues-oldest.txt unless
 # issues-oldest.txt already exists.
@@ -373,7 +381,8 @@ def openIssuesFile():
         workdir = config['source_dir']
         path = os.path.join(workdir, "issues.txt")
         if os.path.exists(path):
-            bakpath = os.path.join(workdir, "issues-oldest.txt")
+            timestamp = get_timestamp(path)
+            bakpath = os.path.join(workdir, f"issues-{timestamp}.txt")
             if not os.path.exists(bakpath):
                 os.rename(path, bakpath)
         issuesFile = io.open(path, "tw", encoding='utf-8', newline='\n')
@@ -452,6 +461,7 @@ def reportIssues():
 # Writes the word list to a file.
 def dumpWords():
     books = state.IDs
+    hapaxcount = 0
     if len(books) == 1:
         path = os.path.join(config['source_dir'], f"wordlist-{books[0]}.tsv")
     elif len(books) > 1:
@@ -459,7 +469,6 @@ def dumpWords():
     else:
         path = None
     if path:
-        hapaxcount = 0
         with io.open(path, "tw", encoding='utf-8', newline = '\n') as file:
             file.write(f"Word\tOccurrences\tReference\n")
             for entry in sorted(wordlist.items(), key=wordkey):
