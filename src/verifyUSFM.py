@@ -110,15 +110,13 @@ class State:
     # The scan parameter is set when source text is being parsed.
     def addID(self, id, scan=False):
         self.initBook()
+        self.reference = id + " header/intro"
+        self.ID = id
         if scan:
             self.sourcetext = {}
-        else:
+        elif id:
             self.IDs.append(id)
-        self.ID = id
-        self.reference = id + " header/intro"
-
-    def getIDs(self):
-        return self.IDs
+            self.reference = ""
 
     def addTitle(self, bookTitle):
         self.booktitles.append(bookTitle)
@@ -453,16 +451,26 @@ def reportIssues():
 
 # Writes the word list to a file.
 def dumpWords():
-    path = os.path.join(config['source_dir'], "wordlist.txt")
-    with io.open(path, "tw", encoding='utf-8', newline = '\n') as file:
-        file.write("For better viewing, use a fixed-width font.\n")
-        file.write("-------------------------------------------\n")
-
-        for entry in sorted(wordlist.items(), key=wordkey):
-            line = f"{entry[0]:20}  {entry[1][0]}"
-            if entry[1][0] == 1:
-                line = line + "    " + entry[1][1]
-            file.write(line + '\n')
+    books = state.IDs
+    if len(books) == 1:
+        path = os.path.join(config['source_dir'], f"wordlist-{books[0]}.tsv")
+    elif len(books) > 1:
+        path = os.path.join(config['source_dir'], "wordlist.tsv")
+    else:
+        path = None
+    if path:
+        hapaxcount = 0
+        with io.open(path, "tw", encoding='utf-8', newline = '\n') as file:
+            file.write(f"Word\tOccurrences\tReference\n")
+            for entry in sorted(wordlist.items(), key=wordkey):
+                line = f"{entry[0]:20}\t{entry[1][0]}"
+                if entry[1][0] == 1:
+                    line = line + "\t" + entry[1][1]
+                    hapaxcount += 1
+                file.write(line + '\n')
+    if hapaxcount > 0:
+        percent = int(hapaxcount * 100 / len(wordlist))
+        reportError(f"{hapaxcount} hapax legomena out of {len(wordlist)} words. ({percent}%)", 0.2)
 
 trans = str.maketrans('', '', "'’\"-_()–&")
 
@@ -487,15 +495,15 @@ def reportMixedCase():
         if entry[1][0] == 1:
             if isMixed(entry[0]):
                 nSingleMixed += 1
-                reportError(f"Mixed case word in {entry[1][1]}: {entry[0]}", 0.1)
+                reportError(f"Mixed case word in {entry[1][1]}: {entry[0]}", 0.4)
         elif entry[1][0] < 5:
             if isMixed(entry[0]):
                 mcwords.append(entry[0])
     if 0 < len(mcwords) < limit:
         start = "Other mixed" if nSingleMixed > 0 else "Mixed"
-        reportError(f"{start} case words occur more than once each: {mcwords}", 0.2)
+        reportError(f"{start} case words occur more than once each: {mcwords}", 0.5)
     elif len(mcwords) >= limit:
-        reportError("Too many mixed case words; reporting cancelled", 0.3)
+        reportError("Too many mixed case words; reporting cancelled", 0.6)
 
 # Returns sort key for the specified item.
 def wordkey(item):
@@ -639,9 +647,7 @@ def takeC(c):
     #     reportError(f"Chapter ends with a section heading: {state.reference}", 13.2)
     state.addChapter(c)
     if state.chapter < 1 or state.chapter > nChapters(state.ID):
-        reportError(f"Invalid chapter number ({c}) is found after {state.lastRef}", 13.1)
-    if len(state.IDs) == 0:
-        reportError("Missing ID before chapter: " + c, 13)
+        reportError(f"Invalid chapter number ({c}) is found after {state.lastRef}", 13)
     if state.chapter < state.lastChapter:
         reportError("Chapter out of order: " + state.reference, 14)
     elif state.chapter == state.lastChapter:
@@ -691,7 +697,7 @@ def takeID(id):
     if len(id) < 3:
         reportError("Invalid ID: " + id, 22)
     id = id[0:3].upper()
-    if id in state.getIDs():
+    if id in state.IDs:
         reportError("Duplicate ID: " + id, 23)
     state.addID(id)
 
@@ -790,8 +796,6 @@ def takeV(vstr):
     for vn in vlist:
         v = str(vn)
         state.addVerse(str(vn))
-        if len(state.IDs) == 0 and state.chapter == 0:
-            reportError("Missing ID before verse: " + v, 35)
         if state.chapter == 0:
             reportError("Missing chapter tag: " + state.reference, 36)
         if state.verse == 1 and state.needPP:
