@@ -65,7 +65,7 @@ def nextstartpos(str):
 # Capitalizes the first word in each sentence in the string.
 # Capitalizes the first word in the string if startsSentence is True.
 # Returns the string with changes as needed.
-def capitalize(str, startsSentence):
+def capitalize(str, startsSentence=True):
     if startsSentence:
         if first := firstword_re.search(str):
             i = first.start()
