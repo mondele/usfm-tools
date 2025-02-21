@@ -43,28 +43,26 @@ def shortname(longpath):
 
 # Writes message to gui, stderr, and issues.txt.
 def reportError(msg):
-    reportStatus(msg)     # message to gui
+    reportToGui('<<ScriptMessage>>', msg)
     sys.stderr.write(msg + "\n")
     if issues := openIssuesFile():
         issues.write(msg + "\n")
 
 # Sends a progress report to the GUI, and to stdout.
 def reportProgress(msg):
-    global gui
-    if gui:
-        with gui.progress_lock:
-            gui.progress = msg if not gui.progress else f"{gui.progress}\n{msg}"
-        gui.event_generate('<<ScriptProgress>>', when="tail")
+    reportToGui('<<ScriptProgress>>', msg)
     print(msg)
 
 # Sends a status message to the GUI, and to stdout.
 def reportStatus(msg):
-    global gui
+    reportToGui('<<ScriptMessage>>', msg)
+    print(msg)
+
+def reportToGui(event, msg):
     if gui:
         with gui.progress_lock:
             gui.progress = msg if not gui.progress else f"{gui.progress}\n{msg}"
-        gui.event_generate('<<ScriptMessage>>', when="tail")
-    print(msg)
+        gui.event_generate(event, when="tail")
 
 # If issues.txt file is not already open, opens it for writing.
 # Overwrites existing issues.txt file, if any.
@@ -211,12 +209,15 @@ def convert_wholefile(path):
     with io.open(path, "tr", encoding="utf-8-sig") as input:
         try:
             alltext = input.read()
-            corrupt_file = False
+            corrupt_file = (len(alltext) < 100)
+            if corrupt_file:
+                reportError("File is truncated: " + shortname(path))
         except UnicodeDecodeError as e:
             reportError("File appears to not be UTF-8: " + shortname(path))
             reportError(str(e))    # 0x92 is Windows encoding for right single quote mark; 0x92 is invalid in UTF-8.
             corrupt_file = True
-            return False
+    if corrupt_file:
+        return False
 
     origtext = alltext
     aligned_usfm = ("lemma=" in alltext)
