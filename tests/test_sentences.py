@@ -8,6 +8,30 @@ src_path = os.path.join(os.path.dirname(tests_path), "src")
 sys.path.append(src_path)
 import pytest
 
+@pytest.mark.parametrize('str, startsSentence, expected',
+    [('sentence 1. next sentence 2.', True, 'Sentence 1. Next sentence 2.'),
+     ('sentence\ncontinuation.', True, 'Sentence\ncontinuation.'),
+     ('hyphenated-word', True, 'Hyphenated-word'),
+     ('sentence 1. next sentence 2.', False, 'sentence 1. Next sentence 2.'),
+     ('sentence\ncontinuation.', False, 'sentence\ncontinuation.'),
+     ('hyphenated-word', False, 'hyphenated-word'),
+     ('b-', True, 'B-'),
+     ('মহিমার মত হব’।” সদাপ্রভু বলেন, এস! এস! ', True, ''),
+     ('end. ŋina a kenet na merenyejin ti', False, 'end. Ŋina a kenet na merenyejin ti'),
+     ('single', False, 'single'),
+     ('single', True, 'Single'),
+     ('They said, "go...', True, ''),
+     ('They said, "go...', False, ''),
+     ('"go," they said.', True, '"Go," they said.'),
+     ('"go," they said.', False, '"go," they said.'),
+    ])
+def test_capitalize(str, startsSentence, expected):
+    import sentences
+    if not expected:
+        expected = str
+    cap = sentences.capitalize(str, startsSentence)
+    assert cap == expected
+
 @pytest.mark.parametrize('str, expected',
     [('Sentence 1. Next sentence 2.', 'Sentence'),
      ('Sentence\nSecond sentence.', 'Sentence'),
