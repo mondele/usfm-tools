@@ -353,6 +353,8 @@ def mark_sections(line):
         startpos = line.find(pheading)
         endpos = startpos + len(pheading)
         assert startpos >= 0 and endpos <= len(line)
+        if pheading.startswith('('):
+            pheading = pheading.strip('(). \n')
         line = section_titles.insert_heading(line[0:startpos].rstrip('( '), pheading.strip('() \n'), line[endpos:])
         changed = True
 

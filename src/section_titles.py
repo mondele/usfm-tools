@@ -20,23 +20,23 @@ expect_allcaps = True
 expect_titlecase = True
 expect_parens = True
 
-# Sets a global variable that informs this module whether to give special
-# weight to strings that are ALL CAPS.
-def consider_allcaps(consider=True):
-    global expect_allcaps
-    expect_allcaps = consider
+# # Sets a global variable that informs this module whether to give special
+# # weight to strings that are ALL CAPS.
+# def consider_allcaps(consider=True):
+#     global expect_allcaps
+#     expect_allcaps = consider
 
-# Sets a global variable that informs this module whether to give special
-# weight to strings that are Title Case.
-def consider_titlecase(consider=True):
-    global expect_titlecase
-    expect_titlecase = consider
+# # Sets a global variable that informs this module whether to give special
+# # weight to strings that are Title Case.
+# def consider_titlecase(consider=True):
+#     global expect_titlecase
+#     expect_titlecase = consider
 
-# Sets a global variable that informs this module whether to give special
-# weight to strings that are in surrounded by parentheses.
-def consider_parens(consider=True):
-    global expect_parens
-    expect_parens = consider
+# # Sets a global variable that informs this module whether to give special
+# # weight to strings that are in surrounded by parentheses.
+# def consider_parens(consider=True):
+#     global expect_parens
+#     expect_parens = consider
 
 # Intended for single words, and may not work correctly for phrases.
 # Differs from str.istitle() in how apostrophes are treated.
@@ -91,6 +91,8 @@ def find_eol_heading(line):
     sentence_starts = [pos for pos in sentences.nextstartpos(line)]
     if len(sentence_starts) > 0:
         startpos = sentence_starts[-1]
+        if startpos > 0 and line[startpos-1] == '(':
+            startpos -= 1
         if is_heading(line[startpos:]):    # last "sentence" in the line
             candidate = line[startpos:]
     return candidate
@@ -108,7 +110,7 @@ singleWordInParens_re = re.compile(r'\(\s*\w+\s*\)')
 def is_heading(str):
     confirmed = False
     str = str.strip(' \n')
-    threshold = titlecase_threshold(str)
+    threshold = _titlecase_threshold(str)
     firstword = sentences.firstword(str)
     # Initial qualification
     possible = (threshold <= 1 and not '\n' in str and\
@@ -129,7 +131,7 @@ def is_heading(str):
 # Calculates the Title Case threshold (percentage of words that must be capitalized)
 # based on characteristics of the string.
 # Assumes that the specified string has already been stripped of leading and trailing white space.
-def titlecase_threshold(str):
+def _titlecase_threshold(str):
     if not str or len(str) < 5:
         adj = 2
     else:
@@ -147,19 +149,21 @@ def titlecase_threshold(str):
                 adj += 0.16
             elif str[i] in "!?,;":
                 adj = 1.2
-        if not isCapitalized(lastword(str)):
+        if not isCapitalized(_lastword(str)):
             adj += 0.24
     return adj
 
-def lastword(str):
+def _lastword(str):
     words = str.split()
     return words[-1] if words else ''
 
 # Inserts the section heading between two parts, including newlines.
 def insert_heading(preheading, heading, postheading):
+    if preheading == None or heading == None or postheading == None:
+        return ''
     preheading = preheading.rstrip()
-    if preheading:
-        preheading += '\n'
-    postheading = '\n' + postheading.lstrip()
-    section = preheading + "\\s " + heading.strip() + "\n\\p" + postheading
-    return section
+    if heading:
+        heading = '\\s ' + heading.strip() + '\n\\p\n'
+        if preheading:
+            preheading += '\n'
+    return preheading + heading + postheading.lstrip()
