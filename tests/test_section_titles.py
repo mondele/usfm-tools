@@ -119,6 +119,15 @@ def test_find_parenthesized_heading(str, expected):
 @pytest.mark.parametrize('line, expected',
     [('', None),
      ('Hukum Taurat wan kitab para nabi. Lalah Baampah Kahidupan', 'Lalah Baampah Kahidupan'),
+     ('First Part. Lalah Baampah kahidupan', None),
+     ('Next Line! Lalah Baampah.', 'Lalah Baampah.'),
+     ('Line Four-! Lalah a Baampah.', None),
+     ('Line Four+? Lalah a Baampah', 'Lalah a Baampah'),
+     ('Line Five. Lalah a La Baampah.', 'Lalah a La Baampah.'),
+     ('Only One Sentence On This Line.', 'Only One Sentence On This Line.'),
+     ('Line Six. (Parens Heading)', '(Parens Heading)'),
+     ('Line Seven. (Parens Heading).', '(Parens Heading).'),
+     ('  . "', None),
     ])
 def test_find_eol_heading(line, expected):
     import section_titles
@@ -178,3 +187,15 @@ def test_percentTitleCase(str, expected):
 def test_isCapitalized(str, expected):
     import section_titles
     assert section_titles.isCapitalized(str) == expected
+
+@pytest.mark.parametrize('preheading, heading, postheading, expected',
+    [('N’amamera', 'heading', '\n', 'N’amamera\n\\s heading\n\\p\n'),
+     ('', 'heading', '', '\\s heading\n\\p\n'),
+     ('Pre  ', '', '', 'Pre'),
+     ('', None, '', ''),
+     ('Pre    ', 'heading', '', 'Pre\n\\s heading\n\\p\n'),
+    ])
+def test_insert_heading(preheading, heading, postheading, expected):
+    import section_titles
+    result = section_titles.insert_heading(preheading, heading, postheading)
+    assert result == expected

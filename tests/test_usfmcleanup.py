@@ -174,7 +174,8 @@ def test_usfm_add_p(str, expected):
     ('Amini!\n', ''),
     ('blah\\s Heading\n\n\n\\v 1\n', ''),     # \n should never occur
     ('end of verse. (Probable Heading)\n', 'end of verse.\n\\s Probable Heading\n\\p\n'),
-    ('end of verse. (Ends with Period.)\n', 'end of verse.\n\\s Ends with Period.\n\\p\n'),  # qualifies by virtue of being the last sentence in the line, not because of parens
+    ('end of verse. (Ends with Period.)\n', 'end of verse.\n\\s Ends with Period\n\\p\n'),  # qualifies by virtue of being the last sentence in the line, not because of parens
+    ('check this. (Period Outside Parens).\n', 'check this.\n\\s Period Outside Parens\n\\p\n'),  # qualifies by virtue of being the last sentence in the line, not because of parens
     ('end of verse. (not a heading) \n', ''),
     ('Do not mark (Parenthesized Words) in the middle of a sentence as a title.\n', ''),
     ('middle of verse (Paul) continue\n', ''),
