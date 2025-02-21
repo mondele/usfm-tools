@@ -43,15 +43,15 @@ def promoteQuotes(str):
         pos = snippet.end()
         snippet = quote0_re.search(str, pos)
 
-    str = translate(str, quote1_re, opentrans)
-    str = translate(str, quote2_re, opentrans)
-    str = translate(str, quote3_re, closetrans)
-    str = translate(str, quote4_re, closetrans)
-    str = translate(str, quote5_re, closetrans)
-    str = translate(str, quote6_re, closetrans)
-    str = translate(str, quote8_re, opentrans)
-    str = translate(str, snglquote9_re, closetrans)
-    str = translate(str, dblquote9_re, closetrans)
+    str = _translate(str, quote1_re, opentrans)
+    str = _translate(str, quote2_re, opentrans)
+    str = _translate(str, quote3_re, closetrans)
+    str = _translate(str, quote4_re, closetrans)
+    str = _translate(str, quote5_re, closetrans)
+    str = _translate(str, quote6_re, closetrans)
+    str = _translate(str, quote8_re, opentrans)
+    str = _translate(str, snglquote9_re, closetrans)
+    str = _translate(str, dblquote9_re, closetrans)
     for pair in subs:
         str = str.replace(pair[0], pair[1])
     return str
@@ -96,22 +96,23 @@ def promoteDoubleQuotes(str):
         pos = snippet.end()
         snippet = dblquote0_re.search(str, pos)
 
-    str = translate(str, dblquote1_re, dblopentrans)
-    str = translate(str, dblquote2_re, dblopentrans)
-    str = translate(str, dblquote3_re, dblclosetrans)
-    str = translate(str, dblquote4_re, dblclosetrans)
-    str = translate(str, dblquote5_re, dblclosetrans)
-    str = translate(str, dblquote6_re, dblclosetrans)
-    str = translate(str, dblquote8_re, dblopentrans)
-    str = translate(str, dblquote9_re, dblclosetrans)
+    str = _translate(str, dblquote1_re, dblopentrans)
+    str = _translate(str, dblquote2_re, dblopentrans)
+    str = _translate(str, dblquote3_re, dblclosetrans)
+    str = _translate(str, dblquote4_re, dblclosetrans)
+    str = _translate(str, dblquote5_re, dblclosetrans)
+    str = _translate(str, dblquote6_re, dblclosetrans)
+    str = _translate(str, dblquote8_re, dblopentrans)
+    str = _translate(str, dblquote9_re, dblclosetrans)
 
     for pair in dblsubs:
         str = str.replace(pair[0], pair[1])
     return str
 
+# Internal function.
 # Translates quotes in the string wherever the expression matches.
 # Uses trans as the translation table.
-def translate(str, rexp, trans):
+def _translate(str, rexp, trans):
     snippet = rexp.search(str)
     while snippet:
         (i,j) = (snippet.start(1), snippet.end(1))
@@ -119,23 +120,23 @@ def translate(str, rexp, trans):
         snippet = rexp.search(str)
     return str
 
-quotes_re = re.compile(r'[“‘‹«\'"’”›»]')
+# quotes_re = re.compile(r'[“‘‹«\'"’”›»]')
 
-# Returns the character position of the first quote in the string, or -1 if none.
-def quotepos(str):
-    quote = quotes_re.search(str)
-    return quote.start() if quote else -1
+# # Returns the character position of the first quote in the string, or -1 if none.
+# def quotepos(str):
+#     quote = quotes_re.search(str)
+#     return quote.start() if quote else -1
 
-openquote_re = re.compile(r'[^\w]*[\'"“‘‹«]+.*\w')
-closequote_re = re.compile(r'\w.*[\'"’”›»]+[^\w]*$')
-internalquote_re = re.compile(r'\w.*["“‘‹«”›»]+.*\w')
+# openquote_re = re.compile(r'[^\w]*[\'"“‘‹«]+.*\w')
+# closequote_re = re.compile(r'\w.*[\'"’”›»]+[^\w]*$')
+# internalquote_re = re.compile(r'\w.*["“‘‹«”›»]+.*\w')
 
 # Returns True if the string starts or ends an incomplete quotation.
 # This function is used by section_titles.is_heading() to exclude
 # most candidates for section titles that include quote marks.
 # @TODO A *complete* internal quotation should not cause a True return value.
-def partialQuote(str):
-    starts = bool(openquote_re.match(str))
-    ends = bool(closequote_re.search(str))
-    internal = bool(internalquote_re.search(str))   # too simplistic
-    return starts ^ ends ^ internal
+# def partialQuote(str):
+#     starts = bool(openquote_re.match(str))
+#     ends = bool(closequote_re.search(str))
+#     internal = bool(internalquote_re.search(str))   # too simplistic
+#     return starts ^ ends ^ internal
