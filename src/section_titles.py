@@ -145,7 +145,7 @@ def _titlecase_threshold(str):
         if str.startswith('(') and str.endswith(')'):
             adj -= 0.03
         for i in range(len(str)-3,len(str)):
-            if str[i] in ".\u0964\u1361\u1362":    # sentence ending punctuation
+            if str[i] in ".\u0964\u0965\u1361\u1362":    # sentence ending punctuation
                 adj += 0.16
             elif str[i] in "!?,;":
                 adj = 1.2
