@@ -39,6 +39,8 @@ subs = [
     #("", ""),
 
     # Remove \u200b and \u200c where they have no effect or don't belong.
+    # \u200b is a zero-width space
+    # \u200c is a zero-width non-joiner
     (" \u200b", " "),   # next to a space
     ("\u200b ", " "),
     (" \u200c", " "),
@@ -124,7 +126,7 @@ subs = [
 	(" ,", ","),
 	(" !", "!"),
 	(" ?", "?"),
-	(" . ", ". "),  # more carful with periods because of .. and ...
+	(" . ", ". "),  # more careful with periods because of .. and ...
 	(" .\n", ".\n"),
 	(" .\"\n", ".\"\n"),
 	(" .\" ", ".\" "),
@@ -132,5 +134,7 @@ subs = [
 	(" .' ", ".' "),
 	(" .»", ".»"),
 	(" .’", ".’"),
-	(" .”", ".”")
+	(" .”", ".”"),
+    (" \u0964", "\u00A0\u0964"),    # non-breaking space before Devanagari Danda
+    (" \u0965", "\u00A0\u0965"),
 ]

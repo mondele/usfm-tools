@@ -113,9 +113,15 @@ def test_fix_booktitles(str, expected):
         ('first(second', 'first (second'),
         ('first(second[third', 'first (second [third'),
         ("beats..", "beats."),
+        ("beats...", ""),
         ('\\v 13 \' first(second', '\\v 13 \'first (second'),
         ('\\v 13 « first(second', '\\v 13 «first (second'),
-        ('first,, second', 'first, second'),
+        ('right)paren', 'right) paren'),
+        ('one)two}three', 'one) two} three'),
+        ('four five]. six', ''),
+        ('seven)8', 'seven) 8'),
+        ('सुगन्धवाला हवन ठहरे ।', 'सुगन्धवाला हवन ठहरे ।'),   # change space to non-break space \u00A0 == 0xC2 0xA0 (UTF-8)
+        ('सुगन्धवाला हवन ठहरे ॥', 'सुगन्धवाला हवन ठहरे ॥'),
     ])
 # 1. Replaces substrings from substitutions module
 # 2. Reduces double periods to single.
@@ -123,6 +129,8 @@ def test_fix_booktitles(str, expected):
 # 4. Adds space before left paren/bracket where needed.
 def test_fix_punctuation(str, expected):
     import usfm_cleanup
+    if not expected:
+        expected = str
     assert usfm_cleanup.fix_punctuation(str) == expected
 
 @pytest.mark.parametrize('str, all, double, expected',
