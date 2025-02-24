@@ -25,7 +25,7 @@ from datetime import date
 gui = None
 config = None
 enable = [True]*9
-schapter = ""
+state = None
 std_titles = ""
 nChanged = 0
 aligned_usfm = False
@@ -33,6 +33,26 @@ needcaps = True
 in_footnote = False
 issuesFile = None
 corrupt_file = False
+
+# Manages the state for a single usfm file. Used when converting by token.
+# @TODO Move needcaps and in_footnote into the State object.
+class State:
+    def __init__(self):
+        self.initBook()
+
+    def initBook(self):
+        self.schapter = ""
+        self.sverse = ""
+        self.currMarker = None
+        self.prevMarker = None
+
+    def addToken(self, token):
+        if token.isC():
+            self.schapter = token.value
+        elif token.isV():
+            self.sverse = token.value
+        self.prevMarker = self.currMarker
+        self.currMarker = token.type
 
 def shortname(longpath):
     source_dir = config['source_dir']
@@ -158,8 +178,9 @@ def fix_booktitles(str):
     str = fix_booktitles_x(str, re.compile(r'(\\mt1? )([^\n]+\n)'))
     return str
 
-spacey3_re = re.compile(r'\\v [0-9]+ ([\(\[\'"«“‘])[\s]', re.UNICODE)    # verse starts with free floating punctuation
-jammedparen_re = re.compile(r'[^\s][\(\[]')
+spacey3_re = re.compile(r'\\v [0-9]+ ([\(\[\'"«“‘])\s', re.UNICODE)    # verse starts with free floating punctuation
+jammedleftparen_re = re.compile(r'[^\s][\(\[\{]')
+jammedrightparen_re = re.compile(r'[\)\]\}]\w')
 
 # 1. Replaces substrings from substitutions module
 # 2. Reduces double periods to single.
@@ -177,11 +198,16 @@ def fix_punctuation(str):
     if bad := spacey3_re.search(str):
         pos = bad.end()
         str = str[:pos-1] + str[pos:]
-    bad = jammedparen_re.search(str)
+    bad = jammedleftparen_re.search(str)
     while bad:
         pos = bad.start() + 1
         str = str[:pos] + ' ' + str[pos:]
-        bad = jammedparen_re.search(str)
+        bad = jammedleftparen_re.search(str)
+    bad = jammedrightparen_re.search(str)
+    while bad:
+        pos = bad.start() + 1
+        str = str[:pos] + ' ' + str[pos:]
+        bad = jammedrightparen_re.search(str)
     return str
 
 # spacing_list is a list of compiled expressions where a space needs to be inserted
@@ -409,7 +435,7 @@ def fix_chapter_label(label):
     lab = cl_pattern.match(label.strip())
     if lab:
         part1 = std_titles + " " if len(lab.group(1)) > 0 else ""
-        part2 = schapter if lab.group(2).isascii() else lab.group(2)
+        part2 = state.schapter if lab.group(2).isascii() else lab.group(2)
         if len(lab.group(3)) > 0 and len(lab.group(1)) > 0:
             part3 = lab.group(3)
         else:
@@ -429,19 +455,19 @@ def takeCL(label, usfm):
 def takeText(str, usfm):
     origstr = str
     global in_footnote
+    if state.prevMarker == 'v' and str.startswith(state.sverse):
+        str = str[len(state.sverse):].lstrip()
     if enable[5] and not in_footnote:
         str = capitalizeAsNeeded(str)
     usfm.writeStr(str)
     return (str != origstr)
 
 def take(token, usfm):
+    state.addToken(token)
+
     changed = False
     if token.isTEXT():
         changed = takeText(token.value, usfm)
-    elif token.isC():
-        global schapter
-        schapter = token.value
-        usfm.writeUsfm(token.type, token.value)
     elif token.isCL():
         if takeCL(token.value, usfm):
             changed = True
@@ -459,6 +485,7 @@ def convert_by_token(path):
     with io.open(path, "tr", 1, encoding="utf-8-sig") as input:
         str = input.read(-1)
 
+    state.initBook()
     usfm = usfmWriter.usfmWriter(path)
     usfm.setInlineTags({"f", "ft", "f*", "rq", "rq*", "fe", "fe*", "fr", "fk", "fq", "fqa", "fqa*"})
     global needcaps
@@ -523,10 +550,12 @@ def main(app = None):
     global config
     global std_titles
     global nChanged
-
+    global state
+    state = State()
     nChanged = 0
     gui = app
     config = configmanager.ToolsConfigManager().get_section('UsfmCleanup')
+
     if config:
         std_titles = config['standard_chapter_title']
         source_dir = config['source_dir']
