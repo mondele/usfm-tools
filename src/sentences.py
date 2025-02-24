@@ -5,12 +5,13 @@
 
 import re
 
-endsentence_re = re.compile(r'[.?!\u0964\u1361\u1362][^\w]*$')
+endsentence_re = re.compile(r'[.?!\u0964\u0965\u1361\u1362][^\w]*$')
 badquoted_re = re.compile(r'[?!\u1361\u1362]+[«“‘\-\u2014\u2013]')
 
 """
 Special characters:
 \u0964 is the Devangari Danda । character that terminates a sentence.
+\u0965 is the Devangari Danda ॥ character that terminates a section or paragraph.
 \u1361 is the Ethiopic Wordspace ፡ character that is often doubled up to use in place of \u1362.
 \u1362 is the Ethiopic Full Stop ። character that terminates a sentence.
 \u2013 is an en dash
@@ -39,7 +40,7 @@ def firstword(str):
         word = first.group(1)
     return word
 
-endsent_re = re.compile(r'[.?!\u0964\u1361\u1362].*?(\w+-\w+|\w+)', re.DOTALL)
+endsent_re = re.compile(r'[.?!\u0964\u0965\u1361\u1362].*?(\w+-\w+|\w+)', re.DOTALL)
 
 # Generator function to yield the first word in each sentence in str,
 # ***not counting*** the first word in the string, even if it starts a sentence.
