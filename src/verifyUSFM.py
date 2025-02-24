@@ -101,8 +101,8 @@ class State:
         self.prevItemCategory = OTHER
         self.toc3 = None
         self.upperCaseReported = False
-        self.currMarker = None
-        self.prevMarker = None
+        # self.currMarker = None
+        # self.prevMarker = None
 
     def __repr__(self):
         return f'State({self.reference})'
@@ -199,8 +199,8 @@ class State:
     def addMarker(self, token):
         cat = category(token)
         okay = (cat == OTHER or cat != self.currItemCategory)
-        self.prevMarker = self.currMarker
-        self.currMarker = token.type
+        # self.prevMarker = self.currMarker
+        # self.currMarker = token.type
         return okay
 
     def addVerse(self, v):
@@ -477,7 +477,7 @@ def dumpWords():
                     line = line + "\t" + entry[1][1]
                     hapaxcount += 1
                 file.write(line + '\n')
-    if hapaxcount > 0:
+    if hapaxcount > 0 and not config['filename']:
         percent = int(hapaxcount * 100 / len(wordlist))
         reportError(f"{hapaxcount} hapax legomena out of {len(wordlist)} words. ({percent}%)", 0.2)
 
