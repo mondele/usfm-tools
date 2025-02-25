@@ -23,3 +23,39 @@ import pytest
 def test_nChapters(str, result):
     import verifyUSFM
     assert verifyUSFM.nChapters(str) == result
+
+@pytest.mark.parametrize('word, expected',
+    [
+        ('', False),
+        ('XYZ', False),
+        ('Mat', False),
+        ('mat', False),
+        ('MaTT', True),
+        ('rEv', True),
+        ('frT', True),
+        ('I', False),
+        ('embed"ded', False),
+        ("embed'ded", False),
+        ("embed’ded", False),
+        ("’leading", False),
+        ("trailing’", False),
+        ('"leading', False),
+        ("'QuoTed'", True),
+        ("'", False),
+        ("`bwo ", False),
+        ("a'iy", False),
+        ("ab'b'eh", False),
+        ("aka-iy", False),
+        ("d'Jerusalem", True),
+        ("Śâulo", False),
+        ("Bârśâbbâś", False),
+        ("BârŚâbbâś", True),
+        ('Two Words', False),
+        # ('two Words', False),     # isMixed() returns True, GIGO
+        ('before”after', False),
+        ('Before”', False),
+        ('”After', False),
+    ])
+def test_isMixed(word, expected):
+    import verifyUSFM
+    assert verifyUSFM.isMixed(word) == expected
