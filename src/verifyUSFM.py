@@ -23,7 +23,7 @@
 # Detects whether files are aligned USFM.
 
 config = None
-suppress = [False]*12
+suppress = [False]*13
 std_titles = None
 state = None
 gui = None
@@ -444,6 +444,39 @@ def write(msg, stream):
     except UnicodeEncodeError as e:
         stream.write(state.reference + ": (Unicode...)\n")
 
+def reportSuppressedIssues():
+    any = False
+    for val in suppress:
+        if val:
+            any = True
+    if any:
+        issuesfile = openIssuesFile()
+        issuesfile.write(f"But these kind(s) of warnings were suppressed:\n")
+        if suppress[1]:
+            issuesfile.write(f"    Irregular numbers.\n")
+        if suppress[3]:
+            issuesfile.write(f"    Punctuation.\n")
+        if suppress[11]:
+            issuesfile.write(f"    Paragraphs missing final punctuation. (Only the total count was reported.)\n")
+        if suppress[2]:
+            issuesfile.write(f"    Missing paragraph marker after chapter marker.\n")
+        if suppress[4]:
+            issuesfile.write(f"    Invalid placement of paragraph/poetry markers.\n")
+        if suppress[5]:
+            issuesfile.write(f"    Unexpected verse counts per chapter.\n")
+        if suppress[6]:
+            issuesfile.write(f"    Straight quotes.\n")
+        elif suppress[7]:
+            issuesfile.write(f"    Straight single quotes.\n")
+        if suppress[9]:
+            issuesfile.write(f"    ASCII content.\n")
+        if suppress[8]:
+            issuesfile.write(f"    Upper case book titles.\n")
+        if suppress[10]:
+            issuesfile.write(f"    First word in sentence not capitalized. (Only the total count was reported.)\n")
+        if suppress[12]:
+            issuesfile.write(f"    Mixed case words.\n")
+
 # Write summary of issues to issuesFile
 def reportIssues():
     global issues
@@ -456,7 +489,8 @@ def reportIssues():
             issuesfile.write(f"{issue[1][0]}:  1 occurrence.\n")
         else:
             issuesfile.write(f"{issue[1][0]}...:  {issue[1][1]} occurrences{issue[1][2]}.\n")
-    issuesfile.write(f"\n{total} issues found.\n")
+    issuesfile.write(f"\n{total} issues reported.\n")
+    reportSuppressedIssues()
 
 # Writes the word list to a file.
 def dumpWords():
@@ -1351,7 +1385,7 @@ def main(app=None):
                 reportError(f"No such file: {path}")
         else:
             verifyDir(workdir)
-        if not config.getboolean('suppress12', fallback = False):
+        if not suppress[12]:
             reportMixedCase()
         dumpWords()
 
