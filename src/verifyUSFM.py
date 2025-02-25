@@ -117,7 +117,6 @@ class State:
             self.sourcetext = {}
         elif id:
             self.IDs.append(id)
-            self.reference = ""
 
     def addTitle(self, bookTitle):
         self.booktitles.append(bookTitle)
