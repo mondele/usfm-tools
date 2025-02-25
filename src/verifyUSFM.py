@@ -462,12 +462,12 @@ def reportIssues():
 def dumpWords():
     books = state.IDs
     hapaxcount = 0
+    oldpath = path = None
     if len(books) == 1:
         path = os.path.join(config['source_dir'], f"wordlist-{books[0]}.tsv")
     elif len(books) > 1:
         path = os.path.join(config['source_dir'], "wordlist.tsv")
-    else:
-        path = None
+        oldpath = os.path.join(config['source_dir'], "wordlist.txt")
     if path:
         with io.open(path, "tw", encoding='utf-8', newline = '\n') as file:
             file.write(f"Word\tOccurrences\tReference\n")
@@ -477,6 +477,8 @@ def dumpWords():
                     line = line + "\t" + entry[1][1]
                     hapaxcount += 1
                 file.write(line + '\n')
+        if oldpath and os.path.isfile(oldpath):
+            os.remove(oldpath)
     if hapaxcount > 0 and not config['filename']:
         percent = int(hapaxcount * 100 / len(wordlist))
         reportError(f"{hapaxcount} hapax legomena out of {len(wordlist)} words. ({percent}%)", 0.2)
