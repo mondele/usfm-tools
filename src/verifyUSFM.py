@@ -973,7 +973,7 @@ def reportPunctuation(text):
         reportError(f"Equals sign (=) in {state.reference}", 52.3)
 
 numberembed_re = re.compile(r'[^\s,:\.\d\(\[\-]+[\d]+[^\s,;\.\d\)\]]+')
-numberprefix_re = re.compile(r'[^\s,\.\d\(\[][\d]+', re.UNICODE)
+numberprefix_re = re.compile(r'[^\s,\.\d\(\[]\d+', re.UNICODE)
 numbersuffix_re = re.compile(r'[\d]+[^\s,;:.\-?!"\d\)\]]', re.UNICODE)
 unsegmented_re = re.compile(r'[\d][\d][\d][\d]+')
 numberformat_re = re.compile(r'[\d]+[.,]?\s[.,]?[\d]+')    # space between digits
@@ -1238,7 +1238,6 @@ def verifyParagraphCount():
     if state.nParagraphs / state.chapter <= 2.5 and state.nPoetry / state.chapter <= 15:
         reportError(f"Low paragraph count ({state.nParagraphs + state.nPoetry}) for {state.ID}", 73.5)
 
-orphantext_re = re.compile(r'\n\n[^\\]', re.UNICODE)
 embeddedquotes_re = re.compile(r"\w'\w")
 
 # Receives the text of an entire book as input.
@@ -1250,9 +1249,7 @@ def verifyWholeFile(contents, path):
     verifyChapterAndVerseMarkers(contents, path)
 
     lines = contents.split('\n')
-    orphans = orphantext_re.search(contents)
-    if orphans:
-        reportOrphans(lines, path)
+    reportSectionHeadings(lines, path)
 
     if not suppress[6]:
         nembedded = len(embeddedquotes_re.findall(contents))
@@ -1268,15 +1265,18 @@ def verifyWholeFile(contents, path):
 
 conflict_re = re.compile(r'<+ HEAD', re.UNICODE)   # conflict resolution tag
 
-def reportOrphans(lines, path):
-    prevline = "xx"
+# Examines lines of text that may contain section headings.
+def reportSectionHeadings(lines, path):
     lineno = 0
+    found = False
     for line in lines:
         lineno += 1
-        if line and line[0] != '\\' and not conflict_re.match(line):
-            if line.istitle() or line.isupper() or section_titles.percentTitlecase(line) > 0.5:
+        if line and not conflict_re.match(line):
+            found = (line[0] != '\\' and section_titles.is_possible_heading(line))
+            if not found:
+                found = section_titles.find_eol_heading(line)
+            if found:
                 reportError("Possible section title at line " + str(lineno) + " in " + path, 76)
-        prevline = line
 
 wjwj_re = re.compile(r' \\wj +\\wj\*', flags=re.UNICODE)
 backslasheol_re = re.compile(r'\\ *\n')
