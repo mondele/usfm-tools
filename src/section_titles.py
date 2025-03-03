@@ -14,7 +14,7 @@
 
 import re
 import sentences
-import quotes
+# import quotes
 
 expect_allcaps = True
 expect_titlecase = True
@@ -38,17 +38,20 @@ expect_parens = True
 #     global expect_parens
 #     expect_parens = consider
 
+startword_re = re.compile(r'[\w "‘“\'\()]')
+
 # Intended for single words, and may not work correctly for phrases.
 # Differs from str.istitle() in how apostrophes are treated.
 # Considered numbers to be uncapitalized words.
 # istitle("Paul's") returns False.
 # isCapitalized("Paul's") returns True.
-# Hyphenated words like E'Besusaida return True if both parts are capitalized.
+# isCapitalized("E'Besusaida") returns True.
+# Hyphenated words like Two-sided and Two-Sided return True.
 def isCapitalized(word):
-    if not word:
+    if not word or not startword_re.match(word):
         result = False
     else:
-        strings = re.split("['’]", word)
+        strings = re.split("['’-]", word)
         result = strings[0].istitle()
         if result:
             for i in range(1,len(strings)):
@@ -97,20 +100,31 @@ def find_eol_heading(line):
             candidate = line[startpos:]
     return candidate
 
-anyMarker_re = re.compile(r'\\[a-z]+[a-z1-5]* ?[0-9]*')
-amen_re = re.compile(r'Am[ei]n')
-forbidden_re = re.compile(r'["“‘‹«”›»]')
-singleWordInParens_re = re.compile(r'\(\s*\w+\s*\)')
-
 # Returns True if the string looks like a section heading.
 # Any backslash markers or quote marks in the string disqualify it.
 # See comments at the top of this file for factors that are considered.
 # The threshold parameter specifies the minimum percentage of capitalized words
 #    in a string that is partly title case.
 def is_heading(str):
-    confirmed = False
     str = str.strip(' \n')
     threshold = _titlecase_threshold(str)
+    return qualifies(str, threshold)
+
+def is_possible_heading(str):
+    str = str.strip(' \n')
+    threshold = _titlecase_threshold(str) - 0.21
+    if threshold < 0.45:
+        threshold = 0.45
+    return qualifies(str, threshold)
+
+anyMarker_re = re.compile(r'\\[a-z]+[a-z1-5]* ?[0-9]*')
+amen_re = re.compile(r'Am[ei]n')
+forbidden_re = re.compile(r'["“‘‹«”›»]')
+singleWordInParens_re = re.compile(r'\(\s*\w+\s*\)')
+
+# Returns True if the string qualifies as a section heading given the specified threshold of capitalized words.
+def qualifies(str, threshold):
+    confirmed = False
     firstword = sentences.firstword(str)
     # Initial qualification
     possible = (threshold <= 1 and not '\n' in str and\
@@ -128,6 +142,7 @@ def is_heading(str):
         confirmed = str[0] == '(' and str[-1] == ')' and (str.isupper() or percentTitlecase(str[1:-1]) >= threshold)
     return confirmed
 
+goodstart_re = re.compile(r'[\w\(]')
 # Calculates the Title Case threshold (percentage of words that must be capitalized)
 # based on characteristics of the string.
 # Assumes that the specified string has already been stripped of leading and trailing white space.
@@ -137,18 +152,20 @@ def _titlecase_threshold(str):
     else:
         adj = 0.51
         if str[-1] == "'" or str[-1] == "’":
-            adj = 1.1
+            adj = 1.2
         if ',' in str:
             adj += 0.16
         if len(str) > 40:
             adj += 0.01 * (len(str) - 40)
         if str.startswith('(') and str.endswith(')'):
             adj -= 0.03
+        if not goodstart_re.match(str):
+            adj += 0.18
         for i in range(len(str)-3,len(str)):
             if str[i] in ".\u0964\u0965\u1361\u1362":    # sentence ending punctuation
                 adj += 0.16
             elif str[i] in "!?,;":
-                adj = 1.2
+                adj = 1.01
         if not isCapitalized(_lastword(str)):
             adj += 0.24
     return adj
