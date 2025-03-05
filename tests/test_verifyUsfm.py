@@ -59,3 +59,38 @@ def test_nChapters(str, result):
 def test_isMixed(word, expected):
     import verifyUSFM
     assert verifyUSFM.isMixed(word) == expected
+
+@pytest.mark.parametrize('str, nchapter, expname',
+    [
+        ('', 1, ''),
+        ('XYZ', 22, 'XYZ'),
+        (' Mat ', 33, 'Mat'),
+        ('1 Korin', 1, 'Korin'),
+        ('1   Korin', 2, '1   Korin'),
+        ('1 Korin   1', 1, '1 Korin'),
+        ('1   Korin  1', 2, '1   Korin  1'),
+        ('2   Korin  1', 2, 'Korin  1'),
+        ('1Korin 1', 1, '1Korin'),
+        ('1Korin 1', 2, '1Korin 1'),
+        ('1Korin 2', 1, '1Korin 2'),
+        ('1Korin 2', 2, '1Korin'),
+    ])
+def test_parseChapterLabel(str, nchapter, expname):
+    import verifyUSFM
+    assert verifyUSFM.parseChapterLabel(str, nchapter) == expname
+
+@pytest.mark.parametrize('s, expected',
+    [
+        ('', 0),
+        ('X3YZ', 0),
+        (' 1 ', 1),
+        ('1 Korin', 0),
+        ('22', 22,),
+        ('باب ۱', 0),
+        ('۱', 1),
+        ('۱۳', 13),
+        ('  ۲۴  ', 24),
+    ])
+def test_decimalvalue(s, expected):
+    import verifyUSFM
+    assert verifyUSFM.decimal_value(s) == expected
