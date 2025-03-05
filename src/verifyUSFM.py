@@ -101,8 +101,6 @@ class State:
         self.prevItemCategory = OTHER
         self.toc3 = None
         self.upperCaseReported = False
-        # self.currMarker = None
-        # self.prevMarker = None
 
     def __repr__(self):
         return f'State({self.reference})'
@@ -147,14 +145,8 @@ class State:
     # Isolate the word/phrase for "chapter" from the given string.
     # Add it to the list of chapter titles.
     def addChapterLabel(self, title):
-        tokens = title.split()
-        for token in tokens:
-            if decimal_value(token) == state.chapter:
-                pos = title.find(token)
-                title = (title[:pos] + title[pos+len(token):]).strip()
-                if title not in self.chaptertitles:
-                    self.chaptertitles.append(title)
-                    break
+        if title not in self.chaptertitles:
+            self.chaptertitles.append(title)
         self.nChapterLabels += 1
         return title    # without chapter number, but spacing unchanged
 
@@ -328,15 +320,8 @@ def category(token):
 # Tries to interpret the specified string as an integer, regardless of language.
 # Returns 0 if unable to interpret.
 def decimal_value(s):
-    value = 0
-    for i in range(len(s)):
-        d = unicodedata.digit(s[i], -1)
-        if d >= 0:
-            value = value * 10 + d
-        else:
-            value = 0
-            break
-    return value
+    s = s.strip()
+    return int(s) if s.isdecimal() else 0
 
 # Returns the number of chapters that the specified book should contain.
 # Returns 0 if the book id is invalid.
@@ -701,14 +686,36 @@ def takeC(c):
     elif state.chapter > state.lastChapter + 1:
         reportError("Missing chapter(s) between: " + state.lastRef + " and " + state.reference, 17)
 
+xyz_re = re.compile(r'(\d+\s+)([^\d]+?)(\s+\d+)')
+yz_re = re.compile(r'(.+?)(\s+\d+)')
+xy_re = re.compile(r'(\d+\s+)(.+)')
+
+# Extracts the word for "Chapter" or other chapter label in the string.
+#
+def parseChapterLabel(value, nchapter):
+    value = value.strip()
+    name = value
+    if xyz := xyz_re.match(value):
+        if decimal_value(xyz.group(3)) == nchapter:
+            name = xyz.group(1) + xyz.group(2)
+        elif decimal_value(xyz.group(1)) == nchapter:
+            name = xyz.group(2) + xyz.group(3)
+    elif yz := yz_re.match(value):
+        if decimal_value(yz.group(2)) == nchapter:
+            name = yz.group(1)
+    elif xy := xy_re.match(value):
+        if decimal_value(xy.group(1)) == nchapter:
+            name = xy.group(2)
+    return name
+
 # Processes a chapter label
-def takeCL(label):
+def takeCL(value):
     global std_titles
     # Report missing text in previous verse
-    title = state.addChapterLabel(label.rstrip())   # gets title without chapter number, but spacing unchanged
-    if len(std_titles) > 0:
-        if title not in std_titles:
-            reportError(f"Non-standard chapter label at {state.reference}: {label}", 42)
+    name = parseChapterLabel(value, state.chapter)
+    state.addChapterLabel(name)
+    if len(std_titles) > 0 and name not in std_titles:
+        reportError(f"Non-standard chapter label at {state.reference}: {value}", 42)
 
 def takeD():
     if not suppress[4]:
@@ -755,7 +762,7 @@ def reportParagraphMarkerErrors(type):
 
 def takeP(type):
     reportParagraphMarkerErrors(type)
-    if not aligned_usfm and not suppress[3] and not state.sentenceEnded():
+    if not aligned_usfm and not suppress[3] and not state.sentenceEnded() and type != 'm':
         if state.verse > 0:
             reportError(f"Check paragraph-ending punctuation at: {state.reference}", 26, suppress[11])
         elif state.reference != "ACT 22":
