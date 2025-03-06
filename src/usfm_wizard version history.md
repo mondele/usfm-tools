@@ -1,4 +1,17 @@
-# UsfmWizard Version history
+# Usfm Wizard Version history
+
+## 1.3.4 - 3/6/25
+* verifyUsfm - use TSV file for wordlist.
+* verifyUsfm - report hapax legomena.
+* verifyUsfm - change naming scheme for backup issues.txt files.
+* verifyUsfm - list suppressed issues in issues.txt.
+* verifyUsfm - improved detection of possible section headings.
+* verifyUsfm - ignore punctuation before \m.
+* verifyUsfm - fix bug identifying inconsistent chapter titles.
+* usfm_cleanup - handle truncated usfm files.
+* usfm_cleanup - remove stray verse numbers at start of verse.
+* usfm_cleanup - spacing (nonbreak if any) before Devanagari Danda characters.
+* usfm_cleanup - spacing after right paren, brace or bracket.
 
 ## 1.3.3
 * txt2usfm - optionally, mark section headings
@@ -18,9 +31,7 @@
 ## 1.3.1
 * Make check for mixed case words optional.
 * usfm_cleanup - ensure space before left paren
-
-
- * usfm_cleanup - make section title recognition optional.
+* usfm_cleanup - make section title recognition optional.
 
 ## 1.3 - 9/4/24
 * Add Usx-to-Usfm conversion process.
@@ -80,7 +91,7 @@
 * Generate word list when verifying usfm.
 * Add option in USFM Cleanup step to mark section headings.
 * Add option in the Verify Manifest step to suppress warnings about ASCII book titles.
-* Add option in the Mark Paragraphs step to disregard sentence boundaries. 
+* Add option in the Mark Paragraphs step to disregard sentence boundaries.
 * Bug fixes
 
 ## 1.1.0 - 2/8/24
