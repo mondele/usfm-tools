@@ -17,6 +17,7 @@ import shutil
 import sentences
 import usfm_verses
 import usfmWriter
+import yaml
 # import cProfile
 
 gui = None
@@ -33,7 +34,9 @@ OTHER = 9
 class State:
     def __init__(self):
         self.reset_data("")
+        self.model = ""     # e.g. "English UDB version 21-05"
 
+    # Resets the state data for the next Bible book
     def reset_data(self, fname):
         self.fname = fname
         self.chapter = self.verse = 0
@@ -45,6 +48,7 @@ class State:
         self.paragraphs_model = []
         self.sections_model = []
         self.expectText = False
+        self.legacyBackup = False
 
     def __repr__(self):
         return f'State({self.reference})'
@@ -163,6 +167,37 @@ class State:
 
     def usfmClose(self):
         self.usfm.close()
+    def keepBackup(self, keep=True):
+        self.legacyBackup = keep
+
+    def identifyModel(self, identity):
+        self.model = identity
+
+# Loads the specified yaml file and reports errors.
+# Returns the contents of the file if no errors.
+def parseYaml(path):
+    contents = None
+    if os.path.isfile(path):
+        with io.open(path, "tr", encoding='utf-8-sig') as file:
+            try:
+                contents = yaml.safe_load(file)
+            except yaml.scanner.ScannerError as e:
+                reportError(f"Yaml syntax error at or before line {e.problem_mark.line} in: {path}")
+            except yaml.parser.ParserError as e:
+                reportError(f"Yaml parsing error at or before line {e.problem_mark.line} in: {path}")
+    else:
+        reportError(f"File missing: {path}")
+    return contents
+
+def identifyModel(model_dir):
+    path = os.path.join(model_dir, "manifest.yaml")
+    manifest = parseYaml(path)
+    if manifest:
+        core = manifest['dublin_core']
+        language = core['language']['title']
+        identifier = core['identifier'].upper()
+        version = core['version']
+        state.identifyModel(f"{language} {identifier} version {version}")
 
 # Inserts \s5 mark if needed
 def mayInsertS5(newchapter=False):
@@ -190,6 +225,7 @@ def takeID(id):
         reportError("Invalid ID: " + id)
     state.usfm.writeUsfm("id", id)
     state.addID( id[0:3].upper() )
+    state.usfm.writeUsfm("rem", f"Paragraph marks have been added, using {state.model} as a model.")
 
 # Copies paragraph marker to output unless output already has a paragraph there.
 # Insert \s5 first, if needed.
@@ -199,12 +235,6 @@ def takeP(tag, value, nexttoken):
     if not state.pAlready(current=False):
         state.addP(state.bridge+1)
         state.usfm.writeUsfm(tag, value)
-
-# def takeQ(tag, value, nexttoken):
-#     if nexttoken.isV():
-#         mayInsertS5()
-#     state.addQ()
-#     state.usfm.writeUsfm(tag, value)
 
 def takeS5():
     if not state.s5Already() and not config.getboolean('removeS5markers', fallback=True):
@@ -385,13 +415,14 @@ def backupUsfmFile(path):
     bakpath = path + "orig"
     if not os.path.isfile(bakpath):
         shutil.copyfile(path, bakpath)
+    else:
+        state.keepBackup(True)
 
 # Deletes temp file and backup file, and leaves original file unchanged.
 def removeTempFiles(path):
-    tmppath = path + ".tmp"
-    os.remove(tmppath)
-    bakpath = path + "orig"
-    os.remove(bakpath)
+    os.remove(path + ".tmp")
+    if not state.legacyBackup:
+        os.remove(path + "orig")
 
 # Renames temp usfmfile to its original name, overwriting the original usfm file.
 def renameUsfmFiles(usfmpath):
@@ -590,6 +621,7 @@ def main(app = None):
     if config:
         global state
         state = State()
+        identifyModel(config['model_dir'])
         source_dir = config['source_dir']
         file = config['filename']    # configmanager version
         if file:
