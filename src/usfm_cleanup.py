@@ -388,6 +388,17 @@ def mark_sections(line):
     mark_sections.sentenceended = changed or sentences.endsSentence(line, checkquotes=True)
     return (changed, line)
 
+vperiod_re = re.compile(r'\\v +[\d\-]+\.')
+# Removed periods after verse numbers.
+def remove_periods(line):
+    changed = False
+    vperiod = vperiod_re.search(line)
+    while vperiod:
+        line = line[0:vperiod.end()-1] + line[vperiod.end():]
+        changed = True
+        vperiod = vperiod_re.search(line, vperiod.end()-1)
+    return (changed, line)
+
 # Rewrites the file line by line, making changes to individual lines
 # Returns True if any changes are made
 def convert_by_line(path):
@@ -402,7 +413,8 @@ def convert_by_line(path):
         (changed2, line) = change_floating_quotes(line)
         if enable[7]:
             (changed3, line) = mark_sections(line)
-        if changed1 or changed2 or changed3:
+        (changed4, line) = remove_periods(line)
+        if changed1 or changed2 or changed3 or changed4:
             changedfile = True
         output.write(line)
     output.close()

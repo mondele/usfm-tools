@@ -40,7 +40,7 @@ def test_add_spaces(str, expected):
         ('\\v 1 words of a verse.\n\\q2\n\\s Heading\n', '\\v 1 words of a verse.\n\\s Heading\n\\q2\n'),
         ('\n\\q2\n\\s2Heading\n', '\n\\q2\n\\s2Heading\n'),     # not a proper heading
         ('\n\\s Heading\n\s Heading2', '\n\\s Heading\n\s Heading2'),
-        ('\n\p\n\\s Heading\n\s Heading2', '\n\\s Heading\n\\p\n\s Heading2'),
+        ('\n\\p\n\\s Heading\n\\s Heading2', '\n\\s Heading\n\\p\n\\s Heading2'),
         ('\n\\p\n\n\\s Heading\n', '\n\\s Heading\n\\p\n'),
         ('\n\\p\n\\s First Heading\n\\v 1 verse\n\\p\n\\s1 Second Heading\n', '\n\\s First Heading\n\\p\n\\v 1 verse\n\\s1 Second Heading\n\\p\n'),
     ])
@@ -62,7 +62,7 @@ def test_usfm_move_pq(str, expected):
         ('\n\\pi\n\\s3 Heading\n', '\n\\s3 Heading\n'),
         ('\n\\q2\n\\s Heading\n', '\n\\s Heading\n'),
         ('asdf.\n\\q1 asdf\n\\q2\n\\s2xyz\n', 'asdf.\n\\q1 asdf\n\\s2xyz\n'),
-        ('\n\\s Heading\n\s Heading2', '\n\\s Heading\n\s Heading2'),
+        ('\n\\s Heading\n\\s Heading2', '\n\\s Heading\n\\s Heading2'),
         ('\n\\p\n\\s Heading\n\\p \n\\s Heading2', '\n\\s Heading\n\\s Heading2'),
         ('\\p\n\\v 1 Verse', '\\p\n\\v 1 Verse'),
         ('\\p\n\\c 1', '\\c 1'),
@@ -204,5 +204,24 @@ def test_mark_sections(line, expected):
     else:
         expectchange = True
     (c,s) = usfm_cleanup.mark_sections(line)
+    assert s == expected
+    assert c == expectchange
+
+@pytest.mark.parametrize('line, expected',
+    [
+    ('11. \\v 11.', '11. \\v 11'),
+    ('alone. alert. 12.   13.,', ''),
+    ('\\c 14 \\v 14. asdf\n', '\\c 14 \\v 14 asdf\n'),
+    ('\\v  15.asdf ', '\\v  15asdf '),
+    ('\\v  16. asdf \\v 17. qwpoeru', '\\v  16 asdf \\v 17 qwpoeru'),
+    ])
+def test_remove_periods(line, expected):
+    import usfm_cleanup
+    if not expected or expected == line:
+        expected = line
+        expectchange = False
+    else:
+        expectchange = True
+    (c,s) = usfm_cleanup.remove_periods(line)
     assert s == expected
     assert c == expectchange
