@@ -14,7 +14,6 @@
 
 import re
 import sentences
-# import quotes
 
 expect_allcaps = True
 expect_titlecase = True
@@ -164,15 +163,20 @@ def _titlecase_threshold(str):
         for i in range(len(str)-3,len(str)):
             if str[i] in ".\u0964\u0965\u1361\u1362":    # sentence ending punctuation
                 adj += 0.16
+                if _wordcount(str) == 1:
+                    adj = 1.01
             elif str[i] in "!?,;":
                 adj = 1.01
         if not isCapitalized(_lastword(str)):
             adj += 0.24
     return adj
 
-def _lastword(str):
-    words = str.split()
+def _lastword(s):
+    words = s.split()
     return words[-1] if words else ''
+
+def _wordcount(s):
+    return len(s.split())
 
 # Inserts the section heading between two parts, including newlines.
 def insert_heading(preheading, heading, postheading):

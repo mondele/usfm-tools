@@ -66,6 +66,8 @@ import pytest
         ('(Single).', False),
         ('(Single)', False),
         ('"Hosana!', False),
+        ('Punctuatedword.', False),
+        ('Wordone Wordtwo.', True),
     ])
 def test_is_heading(str, expected):
     import section_titles
