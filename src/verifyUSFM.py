@@ -84,6 +84,7 @@ class State:
         self.needPP = False
         self.needQQ = False
         self.needVerseText = False
+        self.inVerse = False
         self.textLength = 0
         self.versetext = ""
         self.asciiVerse = True
@@ -120,9 +121,11 @@ class State:
         self.booktitles.append(bookTitle)
         self.prevItemCategory = self.currItemCategory
         self.currItemCategory = OTHER
+        self.inVerse = False
 
     def addToc3(self, toc3):
         self.toc3 = toc3
+        self.inVerse = False
 
     def addB(self):
         self.prevItemCategory = self.currItemCategory
@@ -132,6 +135,7 @@ class State:
         self.lastChapter = self.chapter
         self.chapter = int(c)
         self.needPP = True
+        self.inVerse = False
         self.lastVerse = 0
         self.verse = 0
         self.needVerseText = False
@@ -148,6 +152,7 @@ class State:
         if title not in self.chaptertitles:
             self.chaptertitles.append(title)
         self.nChapterLabels += 1
+        self.inVerse = False
         return title    # without chapter number, but spacing unchanged
 
     def addUncountedParagraph(self):
@@ -179,6 +184,7 @@ class State:
     def addSection(self):
         self.prevItemCategory = self.currItemCategory
         self.currItemCategory = S
+        self.inVerse = False
 
     # Records the start of a new chunk
     def addS5(self):
@@ -198,6 +204,7 @@ class State:
         self.lastVerse = self.verse
         self.verse = int(v)
         self.needVerseText = True
+        self.inVerse = True
         self.textLength = 0
         self.versetext = ""
         self.textOkayHere = True
@@ -874,30 +881,35 @@ reference_re = re.compile(r'[\d]+[\s]*:[\s]*[\d]+', re.UNICODE)
 bracketed_re = re.compile(r'\[ *([^\]]+) *\]', re.UNICODE)
 parenNumber_re = re.compile(r'\([\d, ]{0,11}\)')
 
-# Looks for possible verse references and square brackets in the text, not preceded by a footnote marker.
-# This function is only called when parsing a piece of text preceded by a verse marker.
-def reportFootnotes(text):
-    if not isFootnote(state.lastToken):
-        if ref := reference_re.search(text):
-            reportFootnote(ref.group(0))
-        elif ('(' in text or '[' in text or ')' in text) and (isOptional(state.reference) or state.reference in footnotes.footnotedVerses):
-            # Don't suspect numbers in parens as being a footnote
-            matches = parenNumber_re.findall(text)
-            if text.count('(') > len(matches):     # not every paren includes a simple number
-                reportFootnote('(')
-        elif "[" in text:
-            fn = bracketed_re.search(text)
-            if not fn or ' ' in fn.group(1):    # orphan [, or more than one word between brackets
-                reportFootnote('[')
+# Returns None if nothing looking like a footnote occurs in the specified verse text.
+# In a verse that often has footnotes, even the presence of parens is flagged.
+# Returns the flag character or string that starts the possible footnote.
+def findFootnote(text, reference):
+    flag = None
+    if ref := reference_re.search(text):
+        flag = ref.group(0)
+    elif ('(' in text or ')' in text) and (isOptional(reference) or reference in footnotes.footnotedVerses):
+        # Don't suspect numbers in parens as being a footnote
+        matches = parenNumber_re.findall(text)
+        if text.count('(') > len(matches):     # not every paren includes a simple number
+            flag = '('
+    elif "[" in text:
+        fn = bracketed_re.search(text)
+        if not fn or ' ' in fn.group(1):    # orphan [, or more than one word between brackets
+            flag = '['
+    return flag
 
-def reportFootnote(trigger):
+# Looks for possible verse references and footnotes in the text.
+# This function is only called when parsing a piece of verse text.
+def reportFootnotes(text):
     reference = state.reference
-    if ':' in trigger:
-        reportError(f"Probable chapter:verse reference ({trigger}) at {reference} belongs in a footnote", 43)
-    elif isOptional(reference) or reference in footnotes.footnotedVerses:
-        reportError(f"Bracket or parens found in {reference}, a verse that is often footnoted", 43.1)
-    else:
-        reportError(f"Optional text or untagged footnote at {reference}", 43.2)
+    if trigger := findFootnote(text, reference):
+        if ':' in trigger:
+            reportError(f"Probable chapter:verse reference ({trigger}) at {reference} belongs in a footnote", 43)
+        elif isOptional(reference) or reference in footnotes.footnotedVerses:
+            reportError(f"Bracket or parens found in {reference}, a verse that is often footnoted", 43.1)
+        else:
+            reportError(f"Optional text or untagged footnote at {reference}", 43.2)
 
 # Warns when a paragraph break appears in what seems to be the middle of a sentence.
 # Warns when the specified string is supposed to start a sentence but the first word is not capitalized.
@@ -1056,7 +1068,7 @@ def takeText(t, footnote=False):
             reportError(f"Orphaned punctuation at {state.reference}", 58)
         else:
             reportError("Text begins with phrase-ending punctuation in " + state.reference, 58.1)
-    if state.lastToken and state.lastToken.isV() and not state.aligned_usfm:
+    if state.lastToken and state.inVerse and not state.inFootnote() and not state.aligned_usfm:
         reportFootnotes(t)
     if not suppress[1]:
         reportNumbers(t, footnote)

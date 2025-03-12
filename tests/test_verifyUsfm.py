@@ -94,3 +94,18 @@ def test_parseChapterLabel(str, nchapter, expname):
 def test_decimalvalue(s, expected):
     import verifyUSFM
     assert verifyUSFM.decimal_value(s) == expected
+
+@pytest.mark.parametrize('text, reference, expTrigger',
+    [
+        ('pslm 103:1', "MAT 6:14", '103:1'),
+        ('nyo konin (kanng Liyar ati nyo).', "MAT 6:13", '('),  # MAT 6:13 is a likely footnote location
+        ('nyo konin (kanng Liyar ati nyo).', "MAT 6:14", None),
+        ('ahka, (A khё püng nünah thüm ming sheh.)', "MAT 24:15", None),
+        ('nyo konin [kanng Liyar ati nyo].', "MAT 6:13", '['),
+        ('nyo konin [kanng Liyar ati nyo].', "MAT 6:14", '['),
+        ('nyo konin kanng Liyar ati nyo.', "MAT 6:14", None),
+        ('a hundred thousand (100,000)', "MAT 6:13", None),
+    ])
+def test_findFootnote(text, reference, expTrigger):
+    import verifyUSFM
+    assert verifyUSFM.findFootnote(text, reference) == expTrigger
