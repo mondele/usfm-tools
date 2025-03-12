@@ -29,9 +29,6 @@ state = None
 gui = None
 listener = None
 
-lastToken = None
-aligned_usfm = False
-usfm_version = 2
 issuesFile = None
 issues: dict = {}   # Can't put in State because we want to accumulate issues across all files.
 wordlist = dict()
@@ -72,6 +69,8 @@ class State:
         self.initBook()
 
     def initBook(self):
+        self.usfm_version = 2
+        self.aligned_usfm = False
         self.booktitles = []
         self.chaptertitles = []
         self.nChapterLabels = 0
@@ -80,6 +79,7 @@ class State:
         self.chapter = 0
         self.verse = 0
         self.lastVerse = 0
+        self.lastToken = None
         self.startChunkVerse = 1
         self.needPP = False
         self.needQQ = False
@@ -210,6 +210,15 @@ class State:
     def addAcrosticHeading(self):
         self.textOkayHere = True
         self.needQQ = True
+
+    # Completes processing of the specified (current) token
+    def advance(self, token):
+        self.lastToken = token
+
+    def setAlignedUsfm(self, aligned):
+        self.aligned_usfm = aligned
+    def setUsfmVersion(self, version):
+        self.usfm_version = version
 
     # Resets needQQ flag so that errors are not repeated verse after verse
     def resetPoetry(self):
@@ -607,7 +616,7 @@ def previousVerseCheck():
 
 def longChunkCheck():
     max_chunk_length = 400  # set lower if this is ever needed again
-    if not aligned_usfm and state.verse - (max_chunk_length-1) > state.startChunkVerse:
+    if not state.aligned_usfm and state.verse - (max_chunk_length-1) > state.startChunkVerse:
         reportError("Long chunk: " + state.startChunkRef + "-" + str(state.verse) + "   (" + str(state.verse-state.startChunkVerse+1) + " verses)", 4)
 
 
@@ -762,7 +771,7 @@ def reportParagraphMarkerErrors(type):
 
 def takeP(type):
     reportParagraphMarkerErrors(type)
-    if not aligned_usfm and not suppress[3] and not state.sentenceEnded() and type != 'm':
+    if not state.aligned_usfm and not suppress[3] and not state.sentenceEnded() and type != 'm':
         if state.verse > 0:
             reportError(f"Check paragraph-ending punctuation at: {state.reference}", 26, suppress[11])
         elif state.reference != "ACT 22":
@@ -799,12 +808,6 @@ def takeSection(tag):
 def takeTitle(token):
     if token.isTOC3():
         state.addToc3(token.value)
-        global usfm_version
-        # if usfm_version == 2:
-        #     if (len(token.value) != 3 or not token.value.isascii()):
-        #         reportError("Invalid toc3 value in " + state.reference, 64)
-        #     elif token.value.upper() != state.ID:
-        #         reportError(f"toc3 value ({token.value}) not the same as book ID in {state.reference}", 64.5)
     else:
         state.addTitle(token.value)
     if token.isMT() and token.value.isascii() and not suppress[9]:
@@ -874,8 +877,7 @@ parenNumber_re = re.compile(r'\([\d, ]{0,11}\)')
 # Looks for possible verse references and square brackets in the text, not preceded by a footnote marker.
 # This function is only called when parsing a piece of text preceded by a verse marker.
 def reportFootnotes(text):
-    global lastToken
-    if not isFootnote(lastToken):
+    if not isFootnote(state.lastToken):
         if ref := reference_re.search(text):
             reportFootnote(ref.group(0))
         elif ('(' in text or '[' in text or ')' in text) and (isOptional(state.reference) or state.reference in footnoted_verses.footnotedVerses):
@@ -934,7 +936,6 @@ wordmedial_punct_re = re.compile(r'[\w][.?!;:,()\[\]"«“‘”»›][.?!;:,()\
 outsidequote_re = re.compile(r'([\'"’”»›][\.!])', re.UNICODE)   # Period or exclamation outside closing quote.
 
 def reportPunctuation(text):
-    global lastToken
     if bad := punctuation_re.search(text):
         i = bad.start()
         if text[i:i+3] != '...' or text[i:i+4] == "....":
@@ -942,8 +943,8 @@ def reportPunctuation(text):
             if not (chars[0] in ',.' and chars[1] in "0123456789"):   # it's a number
                 if not (chars[0] == ":" and chars[1] in "0123456789"):
                     reportError("Check the punctuation at " + state.reference + ": " + chars, 45)
-                elif not lastToken or not (state.inFootnote() or lastToken.getType().startswith('io') \
-                          or lastToken.getType().startswith('ip')):
+                elif not state.lastToken or not (state.inFootnote() or state.lastToken.getType().startswith('io') \
+                          or state.lastToken.getType().startswith('ip')):
                     s = context(text, bad.start()-2, bad.end()+1)
                     reportError(f"Untagged footnote (probable) at {state.reference}: {s}", 46)
     #if bad := adjacent_re.search(text):
@@ -1028,16 +1029,15 @@ period_re = re.compile(r'[\s]*[\.,;:!\?]')  # detects phrase-ending punctuation 
 
 # Performs checks on some text, at most a verse in length.
 def takeText(t, footnote=False):
-    global lastToken
-    if not state.textOkay() and not isTextCarryingToken(lastToken):
+    if not state.textOkay() and not isTextCarryingToken(state.lastToken):
         if t[0] == '\\':
             reportError("Uncommon or invalid marker near " + state.reference, 53)
         else:
             # print u"Missing verse marker before text: <" + t.encode('utf-8') + u"> around " + state.reference
             # reportError(u"Missing verse marker or extra text around " + state.reference + u": <" + t[0:10] + u'>.')
             reportError("Missing verse marker or extra text near " + state.reference, 54)
-        if lastToken:
-            reportError("  preceding Token was \\" + lastToken.type, 0)
+        if state.lastToken:
+            reportError("  preceding Token was \\" + state.lastToken.type, 0)
         else:
             reportError("  top of file", 0)
     if state.textOkay() and state.verse == 0 and state.chapter > 0:
@@ -1049,14 +1049,14 @@ def takeText(t, footnote=False):
             reportError("Angle bracket not closed at " + state.reference, 56)
     if "Conflict Parsing Error" in t:
         reportError("BTT Writer artifact in " + state.reference, 57)
-    if not suppress[3] and not aligned_usfm:    # report punctuation issues
+    if not suppress[3] and not state.aligned_usfm:    # report punctuation issues
         reportPunctuation(t)
     if period := period_re.match(t):    # text starts with a period
         if len(t) <= period.end() + 1:
             reportError(f"Orphaned punctuation at {state.reference}", 58)
         else:
             reportError("Text begins with phrase-ending punctuation in " + state.reference, 58.1)
-    if lastToken and lastToken.isV() and not aligned_usfm:
+    if state.lastToken and state.lastToken.isV() and not state.aligned_usfm:
         reportFootnotes(t)
     if not suppress[1]:
         reportNumbers(t, footnote)
@@ -1149,9 +1149,6 @@ def isNumericCandidate(token):
     return token.isTEXT() or isTitleToken(token) or token.isCL() or token.isCP() or token.isFT()
 
 def take(token):
-    global lastToken
-    global usfm_version
-
     if not token.isTEXT():
         if not state.addMarker(token):
             reportError(f"Back to back markers of type {token.type} at {state.reference}", 62)
@@ -1196,15 +1193,15 @@ def take(token):
     elif isTitleToken(token):
         takeTitle(token)
     elif token.isUSFM():    # non-standard USFM token but is used by UnfoldingWord software
-        usfm_version = int(token.value[0])
+        state.setUsfmVersion( int(token.value[0]) )
     elif token.isUnknown():
         if token.value == "p":
             reportError("Orphaned paragraph marker after " + state.reference, 65)
         elif token.value == "v":
             reportError("Unnumbered verse after " + state.reference, 66)
-        elif usfm_version == 2:
+        elif state.usfm_version == 2:
             reportError("Invalid USFM token (\\" + token.value + ") near " + state.reference, 67)
-    lastToken = token
+    state.advance(token)
 
     # if config['language_code'] in {"ur"} and isNumericCandidate(token) and re.search(r'[0-9]', token.value):
         # reportError("Arabic numerals in footnote at " + state.reference, 68)
@@ -1290,10 +1287,6 @@ backslasheol_re = re.compile(r'\\ *\n')
 
 # Corresponding entry point in tx-manager code is verify_contents_quiet()
 def verifyFile(path):
-    global aligned_usfm
-    global lastToken
-    lastToken = None
-
     with io.open(path, "tr", encoding="utf-8-sig") as input:
         try:
             contents = input.read(-1)
@@ -1312,8 +1305,8 @@ def verifyFile(path):
             reportError("File is entirely null bytes: " + shortname(path), 79.1)
             return
 
-    aligned_usfm = ("lemma=" in contents or "x-occurrences" in contents)
-    if aligned_usfm:
+    state.setAlignedUsfm("lemma=" in contents or "x-occurrences" in contents)
+    if state.aligned_usfm:
         contents = usfm_utils.unalign_usfm(contents)
 
     state.canContinue = True
@@ -1332,7 +1325,7 @@ def verifyFile(path):
                 state.addID("")
                 sys.stderr.flush()
                 return
-        if (usfm_version == 2 or aligned_usfm) and not state.toc3:
+        if (state.usfm_version == 2 or state.aligned_usfm) and not state.toc3:
             reportError("No \\toc3 tag in " + shortname(path), 81)
         previousVerseCheck()       # checks last verse in the file
         verifyNotEmpty(path)
@@ -1361,7 +1354,6 @@ def main(app=None):
     global suppress
     global gui
     global wordlist
-    # global usfm_version
 
     wordlist = dict()
     gui = app
@@ -1374,8 +1366,6 @@ def main(app=None):
         std_titles = [ config.get('standard_chapter_title', fallback = '') ]
         if std_titles == ['']:
             std_titles = []
-        # uv = config.get('usfm_version', fallback = "2")
-        # usfm_version = int(uv[0])
 
         global state
         state = State()
