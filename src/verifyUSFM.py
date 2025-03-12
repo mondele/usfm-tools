@@ -39,7 +39,7 @@ from pathlib import Path
 import sys
 import parseUsfm
 import io
-import footnoted_verses
+import footnotes
 import usfm_verses
 import re
 import unicodedata
@@ -880,7 +880,7 @@ def reportFootnotes(text):
     if not isFootnote(state.lastToken):
         if ref := reference_re.search(text):
             reportFootnote(ref.group(0))
-        elif ('(' in text or '[' in text or ')' in text) and (isOptional(state.reference) or state.reference in footnoted_verses.footnotedVerses):
+        elif ('(' in text or '[' in text or ')' in text) and (isOptional(state.reference) or state.reference in footnotes.footnotedVerses):
             # Don't suspect numbers in parens as being a footnote
             matches = parenNumber_re.findall(text)
             if text.count('(') > len(matches):     # not every paren includes a simple number
@@ -894,7 +894,7 @@ def reportFootnote(trigger):
     reference = state.reference
     if ':' in trigger:
         reportError(f"Probable chapter:verse reference ({trigger}) at {reference} belongs in a footnote", 43)
-    elif isOptional(reference) or reference in footnoted_verses.footnotedVerses:
+    elif isOptional(reference) or reference in footnotes.footnotedVerses:
         reportError(f"Bracket or parens found in {reference}, a verse that is often footnoted", 43.1)
     else:
         reportError(f"Optional text or untagged footnote at {reference}", 43.2)
