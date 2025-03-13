@@ -488,10 +488,38 @@ verseCounts = {
     "sort": 102
   },
 	"INT": {
-    "en_name": "Introductions",
+    "en_name": "Introductory Matter",
     "chapters": 0,
     "verses": [],
-    "usfm_number": "A3",
-    "sort": 103
+    "usfm_number": "A7",
+    "sort": 107
+  },
+	"CNC": {
+    "en_name": "Concordance",
+    "chapters": 0,
+    "verses": [],
+    "usfm_number": "A8",
+    "sort": 108
+  },
+	"GLO": {
+    "en_name": "Glossary / Wordlist",
+    "chapters": 0,
+    "verses": [],
+    "usfm_number": "A9",
+    "sort": 109
+  },
+	"GLO": {
+    "en_name": "Topical Index",
+    "chapters": 0,
+    "verses": [],
+    "usfm_number": "B0",
+    "sort": 110
+  },
+	"GLO": {
+    "en_name": "Names Index",
+    "chapters": 0,
+    "verses": [],
+    "usfm_number": "B1",
+    "sort": 111
   }
 }
