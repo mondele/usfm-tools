@@ -109,3 +109,14 @@ def test_decimalvalue(s, expected):
 def test_findFootnote(text, reference, expTrigger):
     import verifyUSFM
     assert verifyUSFM.findFootnote(text, reference) == expTrigger
+
+@pytest.mark.parametrize('fname, expected',
+    [
+        ('unusual.usfm', False),
+        ('41-mat.usfm', False),
+        ('A9-GLO.usfm', True),
+        ('A1-BAK.usfm', True),
+    ])
+def test_peripheral(fname, expected):
+    import verifyUSFM
+    assert verifyUSFM.peripheral(fname) == expected

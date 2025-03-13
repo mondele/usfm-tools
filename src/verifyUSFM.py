@@ -1294,6 +1294,14 @@ def reportSectionHeadings(lines, path):
             if found:
                 reportError("Possible section title at line " + str(lineno) + " in " + path, 76)
 
+usfmname_re = re.compile(r'([0-9AB][0-9])-(\w\w\w)\.')
+# Returns True if the specified fname is a peripheral usfm (back matter, etc.)
+def peripheral(fname):
+    periph = False
+    if usfmname := usfmname_re.match(fname):
+        periph = (nChapters(usfmname.group(2).upper()) < 1)
+    return periph
+
 wjwj_re = re.compile(r' \\wj +\\wj\*', flags=re.UNICODE)
 backslasheol_re = re.compile(r'\\ *\n')
 
@@ -1325,6 +1333,8 @@ def verifyFile(path):
 
     if len(contents) < 100:
         reportError("Incomplete file: " + shortname(path), 80)
+    elif peripheral(os.path.basename(path)):
+        reportError(f"Peripheral file not checked: {shortname(path)}", 80.1)
     else:
         load_source(os.path.basename(path))
         reportProgress(f"Checking {shortname(path)}...")
