@@ -523,3 +523,24 @@ verseCounts = {
     "sort": 111
   }
 }
+
+# Returns True if the specified verse reference is an optional verse.
+# Pass previous=True to check the previous verse.
+def isOptional(ref, previous=False):
+    if previous:
+        # Returns True if the specified reference immediately FOLLOWS a verse that does not appear in some manuscripts.
+        # Does not handle optional passages, such as John 7:53-8:11, or Mark 16:9-20.
+        return ref in { 'MAT 17:22', 'MAT 18:12', 'MAT 23:15', 'MRK 7:17', 'MRK 9:45', 'MRK 9:47',\
+'MRK 11:27', 'MRK 15:29', 'LUK 17:37', 'LUK 23:18', 'JHN 5:5', 'ACT 8:38', 'ACT 15:35',\
+'ACT 24:8', 'ACT 28:30', 'ROM 16:25' }
+    else:
+        # May not handle the optional John 7:53-8:11 passage
+        return ref in { 'MAT 17:21', 'MAT 18:11', 'MAT 23:14', 'MRK 7:16', 'MRK 9:44', 'MRK 9:46',\
+'MRK 16:9', 'MRK 16:10', 'MRK 16:11', 'MRK 16:12', 'MRK 16:13', 'MRK 16:14', 'MRK 16:15', 'MRK 16:16',\
+'MRK 16:17', 'MRK 16:18', 'MRK 16:19', 'MRK 16:20',
+'MRK 11:26', 'MRK 15:28', 'LUK 17:36', 'LUK 23:17', 'JHN 5:4', 'JHN 7:53', 'JHN 8:1', 'ACT 8:37', 'ACT 15:34',\
+'ACT 24:7', 'ACT 28:29', 'ROM 16:24', 'REV 12:18' }
+
+def isShortVerse(ref):
+    return ref in { 'LEV 11:15', 'EXO 20:13','EXO 20:14','EXO 20:15', 'DEU 5:17','DEU 5:18','DEU 5:19', \
+'JOB 3:2', 'JOB 9:1', 'JOB 12:1', 'JOB 16:1', 'JOB 19:1', 'JOB 21:1', 'JOB 27:1', 'JOB 29:1', 'LUK 20:30' }

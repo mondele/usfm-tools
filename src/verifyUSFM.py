@@ -553,11 +553,6 @@ def reportMixedCase():
 # Returns sort key for the specified item.
 def wordkey(item):
     word = item[0].lstrip("'")
-    # word2 = item[0].lstrip("' .,:;!?+-[]{}()<>\"“‘’”*/")
-    # try:
-    #     assert(word == word2)
-    # except AssertionError as e:
-    #     reportError(f"Internal error comparing {word} and {word2}", 0.4)
     return str.lower(word)
 
 # Handles the next token in the source text.
@@ -610,10 +605,10 @@ def similarToSource():
 
 # Report missing text or all ASCII text, in previous verse
 def previousVerseCheck():
-    if not isOptional(state.reference) and state.getTextLength() < 11 and state.verse != 0:
+    if not usfm_verses.isOptional(state.reference) and state.getTextLength() < 11 and state.verse != 0:
         if state.getTextLength() == 0:
             reportError("Empty verse: " + state.reference, 1)
-        elif not isShortVerse(state.reference):
+        elif not usfm_verses.isShortVerse(state.reference):
             reportError("Verse fragment: " + state.reference, 2)
     if not suppress[9] and state.asciiVerse and state.getTextLength() > 0:
         reportError("Verse is entirely ASCII: " + state.reference, 3)
@@ -771,7 +766,7 @@ def takeID(id):
 def reportParagraphMarkerErrors(type):
     if state.currItemCategory in {QQ,PP} and not suppress[4]:
         reportError("Warning: back to back paragraph/poetry markers near: " + state.reference, 24)
-    if type == 'p' and state.needText() and not isOptional(state.reference):
+    if type == 'p' and state.needText() and not usfm_verses.isOptional(state.reference):
         reportError("Paragraph marker after verse marker, or empty verse: " + state.reference, 25)
     if type == 'nb' and state.currItemCategory != C:
         reportError("\\nb marker should follow chapter marker: " + state.reference, 25.1)
@@ -844,9 +839,6 @@ def takeV(vstr):
         if vv_range:
             vnStart = int(vv_range.group(1))
             vnEnd = int(vv_range.group(2))
-            # while vn <= vnEnd:
-            #     vlist.append(vn)
-            #     vn += 1
             for vn in range(vnStart, vnEnd + 1):
                 vlist.append(vn)
         else:
@@ -855,7 +847,7 @@ def takeV(vstr):
         vlist.append(int(vstr))
 
     for vn in vlist:
-        v = str(vn)
+        # v = str(vn)
         state.addVerse(str(vn))
         if state.chapter == 0:
             reportError("Missing chapter tag: " + state.reference, 36)
@@ -871,7 +863,7 @@ def takeV(vstr):
             state.addError(state.reference)
         elif state.verse == state.lastVerse:
             reportError("Duplicated verse number: " + state.reference, 40)
-        elif state.verse == state.lastVerse + 2 and not isOptional(state.reference, True):
+        elif state.verse == state.lastVerse + 2 and not usfm_verses.isOptional(state.reference, True):
             if state.addError(state.lastRef):
                 reportError("Missing verse between: " + state.lastRef + " and " + state.reference, 41)
         elif state.verse > state.lastVerse + 2 and state.addError(state.lastRef):
@@ -888,7 +880,7 @@ def findFootnote(text, reference):
     flag = None
     if ref := reference_re.search(text):
         flag = ref.group(0)
-    elif ('(' in text or ')' in text) and (isOptional(reference) or reference in footnotes.footnotedVerses):
+    elif ('(' in text or ')' in text) and (usfm_verses.isOptional(reference) or reference in footnotes.footnotedVerses):
         # Don't suspect numbers in parens as being a footnote
         matches = parenNumber_re.findall(text)
         if text.count('(') > len(matches):     # not every paren includes a simple number
@@ -906,7 +898,7 @@ def reportFootnotes(text):
     if trigger := findFootnote(text, reference):
         if ':' in trigger:
             reportError(f"Probable chapter:verse reference ({trigger}) at {reference} belongs in a footnote", 43)
-        elif isOptional(reference) or reference in footnotes.footnotedVerses:
+        elif usfm_verses.isOptional(reference) or reference in footnotes.footnotedVerses:
             reportError(f"Bracket or parens found in {reference}, a verse that is often footnoted", 43.1)
         else:
             reportError(f"Optional text or untagged footnote at {reference}", 43.2)
@@ -1110,27 +1102,6 @@ def isFootnote(token):
 # Returns true if token is part of a cross reference
 def isCrossRef(token):
     return token.isX_S() or token.isX_E() or token.isXO() or token.isXT()
-
-# Returns True if the specified verse reference is an optional verse.
-# Pass previous=True to check the previous verse.
-def isOptional(ref, previous=False):
-    if previous:
-        # Returns True if the specified reference immediately FOLLOWS a verse that does not appear in some manuscripts.
-        # Does not handle optional passages, such as John 7:53-8:11, or Mark 16:9-20.
-        return ref in { 'MAT 17:22', 'MAT 18:12', 'MAT 23:15', 'MRK 7:17', 'MRK 9:45', 'MRK 9:47',\
-'MRK 11:27', 'MRK 15:29', 'LUK 17:37', 'LUK 23:18', 'JHN 5:5', 'ACT 8:38', 'ACT 15:35',\
-'ACT 24:8', 'ACT 28:30', 'ROM 16:25' }
-    else:
-        # May not handle the optional John 7:53-8:11 passage
-        return ref in { 'MAT 17:21', 'MAT 18:11', 'MAT 23:14', 'MRK 7:16', 'MRK 9:44', 'MRK 9:46',\
-'MRK 16:9', 'MRK 16:10', 'MRK 16:11', 'MRK 16:12', 'MRK 16:13', 'MRK 16:14', 'MRK 16:15', 'MRK 16:16',\
-'MRK 16:17', 'MRK 16:18', 'MRK 16:19', 'MRK 16:20',
-'MRK 11:26', 'MRK 15:28', 'LUK 17:36', 'LUK 23:17', 'JHN 5:4', 'JHN 7:53', 'JHN 8:1', 'ACT 8:37', 'ACT 15:34',\
-'ACT 24:7', 'ACT 28:29', 'ROM 16:24', 'REV 12:18' }
-
-def isShortVerse(ref):
-    return ref in { 'LEV 11:15', 'EXO 20:13','EXO 20:14','EXO 20:15', 'DEU 5:17','DEU 5:18','DEU 5:19', \
-'JOB 3:2', 'JOB 9:1', 'JOB 12:1', 'JOB 16:1', 'JOB 19:1', 'JOB 21:1', 'JOB 27:1', 'JOB 29:1', 'LUK 20:30' }
 
 def isPoetry(token):
     return token.isQ() or token.isQ1() or token.isQ2() or token.isQ3() or token.isQA() or \
