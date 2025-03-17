@@ -788,9 +788,9 @@ def takeQ(type, value):
     state.addPoetry(value)
 
 def takeS5():
-    # longChunkCheck()
     state.addS5()
-    takeSection('s5')
+    if state.currItemCategory == S:
+        reportError(f"Back to back section markers after {state.reference}", 29.5)
 
 def reportSectionPrecedentErrors(tag):
     if state.currItemCategory == PP:
