@@ -55,8 +55,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         self.filename = StringVar()
         self.std_titles = StringVar()
         self.compare_dir = StringVar()
-        for var in (self.source_dir, self.filename, self.compare_dir):
-            var.trace_add("write", self._onChangeEntry)
+        self.language_code.trace_add("write", self._onChangeLanguage)
         self.suppress = [BooleanVar(value = False) for i in range(13)]
         self.suppress[6].trace_add("write", self._onChangeQuotes)
         self.suppress[7].trace_add("write", self._onChangeQuotes)
@@ -240,8 +239,12 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
     def _onFindCmpDir(self, *args):
         self.controller.askdir(self.compare_dir)
 
-    def _onChangeEntry(self, *args):
-        nonascii_script = self.language_code.get() in {'as','bn','gu','hi','kn','ml','mr','nag','ne','or','pa','ru','ta','te','zh'}
+    # When the language changes, set the ASCII content flag.
+    def _onChangeLanguage(self, *args):
+        nonascii_script = self.language_code.get() in {'am','apd','ar','arb','as','bn','bul',
+            'grc','gu','hi','kk','km','kn','ml','mr','my','nag','ne','or','pa','pcl',
+            'pes','pnb','pnb-x-faqirparsi','rml','ru','ta','te','tg','th','thr','ur',
+            'ur-deva','xal','zh'}
         self.suppress[9].set(not nonascii_script)
         self.suppress9_checkbox.state(['disabled'] if nonascii_script else ['!disabled'])
         self._set_button_status()
