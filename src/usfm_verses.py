@@ -508,20 +508,34 @@ verseCounts = {
     "usfm_number": "A9",
     "sort": 109
   },
-	"GLO": {
+	"TDX": {
     "en_name": "Topical Index",
     "chapters": 0,
     "verses": [],
     "usfm_number": "B0",
     "sort": 110
   },
-	"GLO": {
+	"NDX": {
     "en_name": "Names Index",
     "chapters": 0,
     "verses": [],
     "usfm_number": "B1",
     "sort": 111
-  }
+  },
+	"XXA": {
+    "en_name": "Extra Material",
+    "chapters": 0,
+    "verses": [],
+    "usfm_number": "94",
+    "sort": 120
+  },
+	"XXB": {
+    "en_name": "Extra Material",
+    "chapters": 0,
+    "verses": [],
+    "usfm_number": "95",
+    "sort":121
+  },
 }
 
 # Returns True if the specified verse reference is an optional verse.
