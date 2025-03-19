@@ -891,13 +891,23 @@ def findFootnote(text, reference):
             flag = '['
     return flag
 
+# Returns True if the text contains a single, matching pair of brackets, with
+# at least a verse reference in between.
+def validBracketedFootnote(text):
+    valid = False
+    fn = bracketed_re.search(text)
+    if fn and reference_re.search(fn.group(0)):
+        valid = True
+    return valid
+
 # Looks for possible verse references and footnotes in the text.
 # This function is only called when parsing a piece of verse text.
 def reportFootnotes(text):
     reference = state.reference
     if trigger := findFootnote(text, reference):
         if ':' in trigger:
-            reportError(f"Probable chapter:verse reference ({trigger}) at {reference} belongs in a footnote", 43)
+            if not validBracketedFootnote(text):
+                reportError(f"Probable chapter:verse reference ({trigger}) at {reference} belongs in a footnote", 43)
         elif usfm_verses.isOptional(reference) or reference in footnotes.footnotedVerses:
             reportError(f"Bracket or parens found in {reference}, a verse that is often footnoted", 43.1)
         else:
@@ -947,14 +957,11 @@ def reportPunctuation(text):
             if not (chars[0] in ',.' and chars[1] in "0123456789"):   # it's a number
                 if not (chars[0] == ":" and chars[1] in "0123456789"):
                     reportError("Check the punctuation at " + state.reference + ": " + chars, 45)
-                elif not state.lastToken or not (state.inFootnote() or state.lastToken.getType().startswith('io') \
-                          or state.lastToken.getType().startswith('ip')):
-                    s = context(text, bad.start()-2, bad.end()+1)
-                    reportError(f"Untagged footnote (probable) at {state.reference}: {s}", 46)
-    #if bad := adjacent_re.search(text):
-        #i = bad.start()
-        #if text[i:i+3] != "..." or text[i:i+4] == "....":   # Don't report proper ellipses ...
-            #reportError("Check repeated punctuation at " + state.reference + ": " + bad.group(1), 47)
+                # elif not state.lastToken or not (state.inFootnote() or state.lastToken.getType().startswith('io') \
+                #           or state.lastToken.getType().startswith('ip')):
+                #     s = context(text, bad.start()-2, bad.end()+1)
+                #     reportError(f"Untagged footnote (probable) at {state.reference}: {s}", 46)
+                # 3/17/25: this warning is unnecessary. Was always followed by 'Probable chapter:verse' warning.
     if bad := spacey_re.search(text):
         reportError("Space before phrase ending mark at " + state.reference + ": " + bad.group(1), 48)
     if bad := outsidequote_re.search(text):
@@ -1094,7 +1101,6 @@ def addWords(t):
 def isFootnote(token):
     if token:
         result = (token.getType().startswith("f") and token.getType() != "fig") or token.getType().startswith("rq")
-        #return token.isF_S() or token.isF_E() or token.isFR() or token.isFT() or token.isFP() or token.isFE_S() or token.isFE_E()
     else:
         result = False
     return result
