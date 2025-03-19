@@ -110,6 +110,19 @@ def test_findFootnote(text, reference, expTrigger):
     import verifyUSFM
     assert verifyUSFM.findFootnote(text, reference) == expTrigger
 
+@pytest.mark.parametrize('text, expected',
+    [
+        ('pslm 103:1', False),
+        ('Parens (Psalm 103:1).', False),
+        ('Brackets [but not reference v.13]', False),
+        ('[unmatched bracket COL 4:3', False),
+        ('spaces [ MR K 1:44  ]', True),
+        ('a hundred thousand [100,000]', False),
+    ])
+def test_validBracketedFootnote(text, expected):
+    import verifyUSFM
+    assert verifyUSFM.validBracketedFootnote(text) == expected
+
 @pytest.mark.parametrize('fname, expected',
     [
         ('unusual.usfm', False),
