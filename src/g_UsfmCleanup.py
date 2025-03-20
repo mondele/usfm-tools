@@ -89,18 +89,21 @@ class UsfmCleanup_Frame(g_step.Step_Frame):
             text="Inventory existing chapter labels")
 
         subheadingFont = font.Font(size=10, slant='italic')     # normal size is 9
-        enable_label = ttk.Label(self, text="Enable these fixes?", font=subheadingFont)
+        enable_label = ttk.Label(self, text="Optional fixes:",
+                                 font=subheadingFont)
         enable_label.grid(row=10, column=1, columnspan=2, sticky=W, pady=(4,2))
+        helper_Tip = Hovertip(enable_label, hover_delay=500,
+            text="Enable these fixes in addition to the standard ones.")
 
-        enable1_checkbox = ttk.Checkbutton(self, text='Spaces', variable=self.enable[1],
-                                             onvalue=True, offvalue=False)
-        enable1_checkbox.grid(row=11, column=1, sticky=W)
-        enable1_Tip = Hovertip(enable1_checkbox, hover_delay=500,
-             text="Add spaces between comma/period/colon and a letter (recommended for most languages).")
+        # enable1_checkbox = ttk.Checkbutton(self, text='Spaces', variable=self.enable[1],
+        #                                      onvalue=True, offvalue=False)
+        # enable1_checkbox.grid(row=11, column=1, sticky=W)
+        # enable1_Tip = Hovertip(enable1_checkbox, hover_delay=500,
+        #      text="Add spaces between comma/period/colon and a letter (recommended for most languages).")
 
         enable2_checkbox = ttk.Checkbutton(self, text='Punctuation', variable=self.enable[2],
                                              onvalue=True, offvalue=False)
-        enable2_checkbox.grid(row=11, column=2, sticky=W)
+        enable2_checkbox.grid(row=11, column=1, sticky=W)
         enable2_Tip = Hovertip(enable2_checkbox, hover_delay=500,
              text="Fix double periods, doubled angle brackets, other \"safe\" substitutions (recommended for most languages).")
 
@@ -119,28 +122,28 @@ class UsfmCleanup_Frame(g_step.Step_Frame):
 
         enable5_checkbox = ttk.Checkbutton(self, text='Capitalization', variable=self.enable[5],
                                              onvalue=True, offvalue=False)
-        enable5_checkbox.grid(row=12, column=1, sticky=W)
+        enable5_checkbox.grid(row=11, column=2, sticky=W)
         enable5_Tip = Hovertip(enable5_checkbox, hover_delay=500,
              text="Enforce capitalization of the first word in sentences, disregarding footnotes.")
 
-        enable6_checkbox = ttk.Checkbutton(self, text='\s5 markers', variable=self.enable[6],
-                                             onvalue=True, offvalue=False)
-        enable6_checkbox.grid(row=12, column=2, sticky=W)
-        enable6_Tip = Hovertip(enable6_checkbox, hover_delay=500,
-             text="Remove \s5 markers (recommended for all text except GLs).")
+        # enable6_checkbox = ttk.Checkbutton(self, text='\s5 markers', variable=self.enable[6],
+        #                                      onvalue=True, offvalue=False)
+        # enable6_checkbox.grid(row=12, column=2, sticky=W)
+        # enable6_Tip = Hovertip(enable6_checkbox, hover_delay=500,
+        #      text="Remove \s5 markers (recommended for all text except GLs).")
 
         enable7_checkbox = ttk.Checkbutton(self, text='Section titles', variable=self.enable[7],
                                            onvalue=True, offvalue=False)
-        enable7_checkbox.grid(row=12, column=3, sticky=W)
+        enable7_checkbox.grid(row=12, column=1, sticky=W)
         enable7_Tip = Hovertip(enable7_checkbox, hover_delay=500,
               text="Mark recognizable section titles with \s. Disable this option if no section headings exist.")
 
-        self.enable8_checkbox = ttk.Checkbutton(self, text='Chapter labels', variable=self.enable[8],
-                                             onvalue=True, offvalue=False)
-        self.enable8_checkbox.grid(row=12, column=4, sticky=W)
-        enable8_Tip = Hovertip(self.enable8_checkbox, hover_delay=500,
-             text="Standardize chapter labels.")
-        self.enable8_checkbox.state(['disabled'])
+        # self.enable8_checkbox = ttk.Checkbutton(self, text='Chapter labels', variable=self.enable[8],
+        #                                      onvalue=True, offvalue=False)
+        # self.enable8_checkbox.grid(row=12, column=4, sticky=W)
+        # enable8_Tip = Hovertip(self.enable8_checkbox, hover_delay=500,
+        #      text="Standardize chapter labels.")
+        # self.enable8_checkbox.state(['disabled'])
 
     def show_values(self, values):
         self.values = values
@@ -178,9 +181,12 @@ class UsfmCleanup_Frame(g_step.Step_Frame):
         self.values['source_dir'] = self.source_dir.get()
         self.values['filename'] = self.filename.get()
         self.values['standard_chapter_title'] = self.std_titles.get()
-        for si in range(len(self.enable)):
+        for si in [2,3,4,5,7]:
             configvalue = f"enable{si}"
             self.values[configvalue] = str(self.enable[si].get())
+        self.values['enable1'] = "True" # Spaces
+        self.values['enable6'] = "True" # \s5 markers
+        self.values['enable8'] = "True" if self.std_titles.get() else "False"
         self.controller.mainapp.save_values(stepname, self.values)
         self._set_button_status()
 
@@ -208,9 +214,9 @@ class UsfmCleanup_Frame(g_step.Step_Frame):
 
     # When there is no standard chapter title, disable the 'Fix chapter titles" button.
     def _onChangeTitles(self, *args):
-        if not self.std_titles.get():
-            self.enable[8].set(False)
-        self.enable8_checkbox.state(['!disabled'] if self.std_titles.get() else ['disabled'])
+        dolabels = True if self.std_titles.get() else False
+        self.enable[8].set(dolabels)
+        # self.enable8_checkbox.state(['!disabled'] if self.std_titles.get() else ['disabled'])
 
     def _onOpenIssues(self, *args):
         self._save_values()
