@@ -217,15 +217,16 @@ spacing_list = [ re.compile(r'[\.,;:)\]][\w]'),
 
 # Adds spaces where needed. spacing_list controls what happens.
 # spacing_list may need to be customized for every language.
-def add_spaces(str):
+def add_spaces(s):
     for sub_re in spacing_list:
-        found = sub_re.search(str, 0)
+        found = sub_re.search(s, 0)
         while found:
-            pos = found.start() + 1
-            if str[pos-1] not in ".,:" or not str[pos].isdigit() or (pos>1 and not str[pos-2].isdigit()):
-                str = str[:pos] + ' ' + str[pos:]
-            found = sub_re.search(str, pos+1)
-    return str
+            pos = found.start()
+            second = pos+1
+            if s[pos] not in ".,:" or not s[second].isdigit() or (pos>0 and not s[pos-1].isdigit()):
+                s = s[:second] + ' ' + s[second:]
+            found = sub_re.search(s, second)
+    return s
 
 # Rewrites file and returns True if any changes are made.
 def convert_wholefile(path):
