@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# This module counts occurrences of each chapter label in a folder of .usfm files. 
+# inventory() counts occurrences of each chapter label in a folder of .usfm files.
 
 import configmanager
 import sys
@@ -8,7 +8,6 @@ import io
 import re
 
 gui = None
-config = None
 labels: dict = {}   # Chapter labels and counts
 
 # Writes the error messages to stderr and the gui.
@@ -67,12 +66,12 @@ def processFile(path):
             else:
                 labels[label] = 1
 
-# Processes each directory and its files one at a time
-def main(app = None):
+# Processes the caller's directory and its files one at a time.
+# caller must be a valid section in the ToolsConfigManager.
+def inventory(app, caller):
     global gui
     gui = app
-    global config
-    config = configmanager.ToolsConfigManager().get_section('VerifyUSFM')
+    config = configmanager.ToolsConfigManager().get_section(caller)
     if config:
         labels.clear()
         source_dir = config['source_dir']
@@ -84,6 +83,3 @@ def main(app = None):
         sys.stdout.flush()
     if gui:
         gui.event_generate('<<ScriptEnd>>', when="tail")
-
-if __name__ == "__main__":
-    main()

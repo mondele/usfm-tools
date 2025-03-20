@@ -25,7 +25,7 @@ class UsfmCleanup(g_step.Step):
 
     def onNext(self):
         super().onNext('source_dir', 'filename')
-    
+
     def onExecute(self, values):
         self.enablebutton(2, False)
         count = 1
@@ -41,6 +41,10 @@ class UsfmCleanup(g_step.Step):
                'correctExt': ".usfm"}
         self.mainapp.save_values('RevertChanges', sec)
         self.mainapp.execute_script("revertChanges", 1)
+        self.frame.clear_messages()
+
+    def executeInventoryLabels(self):
+        self.mainapp.execute_script("inventory_cl_2", 0)
         self.frame.clear_messages()
 
 class UsfmCleanup_Frame(g_step.Step_Frame):
@@ -72,13 +76,17 @@ class UsfmCleanup_Frame(g_step.Step_Frame):
              text="Leave filename blank to clean all .usfm files in the folder.")
         file_find = ttk.Button(self, text="...", width=2, command=self._onFindFile)
         file_find.grid(row=5, column=3, sticky=W)
-        
+
         std_titles_label = ttk.Label(self, text="Standard chapter title:", width=20)
         std_titles_label.grid(row=6, column=1, sticky=E)
-        std_titles_entry = ttk.Entry(self, width=18, textvariable=self.std_titles)
+        std_titles_entry = ttk.Entry(self, width=22, textvariable=self.std_titles)
         std_titles_entry.grid(row=6, column=2, sticky=W)
         std_title_Tip = Hovertip(std_titles_entry, hover_delay=500,
              text="Leave blank if unknown.")
+        std_titles_helper = ttk.Button(self, text="...", width=2, command=self._onInventoryLabels)
+        std_titles_helper.grid(row=6, column=3, sticky=W)
+        helper_Tip = Hovertip(std_titles_helper, hover_delay=500,
+            text="Inventory existing chapter labels")
 
         subheadingFont = font.Font(size=10, slant='italic')     # normal size is 9
         enable_label = ttk.Label(self, text="Enable these fixes?", font=subheadingFont)
@@ -183,6 +191,11 @@ class UsfmCleanup_Frame(g_step.Step_Frame):
                                            filetypes=[('Usfm file', '*.usfm')])
         if path:
             self.filename.set(os.path.basename(path))
+
+    # Executes a script that inventories the existing chapter labels
+    def _onInventoryLabels(self, *args):
+        self._save_values()
+        self.controller.executeInventoryLabels()
     def _onChangeEntry(self, *args):
         self._set_button_status()
     def _onOpenSourceDir(self, *args):

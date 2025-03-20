@@ -42,8 +42,8 @@ class VerifyUSFM(g_step.Step):
         self.frame.clear_messages()
         self.executed = True
 
-    def executeInventoryLabels(self, folder):
-        self.mainapp.execute_script("inventory_chapter_labels", 0)
+    def executeInventoryLabels(self):
+        self.mainapp.execute_script("inventory_cl_1", 0)
         self.frame.clear_messages()
 
 class VerifyUSFM_Frame(g_step.Step_Frame):
@@ -226,7 +226,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
     # Executes a script that inventories the existing chapter labels
     def _onInventoryLabels(self, *args):
         self._save_values()
-        self.controller.executeInventoryLabels(self.values['source_dir'])
+        self.controller.executeInventoryLabels()
 
     def _onFindSrcDir(self, *args):
         self.controller.askdir(self.source_dir)
