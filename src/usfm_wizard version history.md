@@ -1,5 +1,15 @@
 # Usfm Wizard Version history
 
+## 1.3.5
+* usfm_cleanup - remove periods after verse numbers.
+* usfm_cleanup - add chapter label finder function.
+* usfm_cleanup - remove standard fix options from GUI.
+* txt2Usfm and usfm_cleanup - some improvements to section title recognition.
+* verifyUsfm - improve possible footnote recognition.
+* verifyUsfm - eliminated incorrect warning about needing paragraph marker after \s5.
+* verifyUsfm - eliminate some redundant warnings.
+* verifyUsfm - eliminate warnings about apparent footnotes between square brackets.  
+
 ## 1.3.4 - 3/6/25
 * verifyUsfm - use TSV file for wordlist.
 * verifyUsfm - report hapax legomena.
@@ -12,6 +22,7 @@
 * usfm_cleanup - remove stray verse numbers at start of verse.
 * usfm_cleanup - spacing (nonbreak if any) before Devanagari Danda characters.
 * usfm_cleanup - spacing after right paren, brace or bracket.
+* mark_paragraphs - insert remark in target USFM file to identify model text.
 
 ## 1.3.3
 * txt2usfm - optionally, mark section headings
