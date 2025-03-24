@@ -15,16 +15,17 @@ import io
 class ProjectInfo:
     def __init__(self, project_dir, language_code):
         self.project_dir = project_dir
-        if os.path.exists(os.path.dirname(project_dir)):
+        self.info = self.configpath = None
+        if os.path.exists( os.path.dirname(project_dir) ):
             self.configpath = os.path.join(os.path.dirname(project_dir), language_code+".json")
             if os.path.isfile(self.configpath):
                 with io.open(self.configpath, 'r') as json_file:
                     self.info = json.load(json_file)
                 assert 'language' in self.info
                 assert 'source_translations' in self.info
-            else:
-                self.info = {'language': {'id': language_code},
-                            'source_translations': [] }
+        if not self.info:
+            self.info = {'language': {'id': language_code},
+                        'source_translations': [] }
 
     def __repr__(self):
         return f'ProjectInfo({self.configpath})'
@@ -56,6 +57,9 @@ class ProjectInfo:
                                                     'resource_id': resource_id,
                                                     'version': version,
                                                     'count': 1} )
+    # This function is temporary, until the manifest.yaml is implemented
+    def getSources(self):
+        return self.info['source_translations']
     def getMainSource(self):
         mainsource = None
         if len(self.info['source_translations']) > 0:
