@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 # This script converts text files from tStudio to USFM Resource Container format.
-#    Parses manifest.json to get the book ID.
+#    Parses manifest.json to get the book ID, contributors, sources, etc.
+#    Outputs a project information file in the parent folder.
 #    Outputs list of contributors and sources gleaned from all manifest.json files.
 #    Finds and parses title.txt to get the book title.
 #    Populates the USFM headers.
 #    Standardizes the names of .usfm files. For example 41-MAT.usfm and 42-MRK.usfm.
 #    Converts multiple books at once if there are multiple books.
 
-
 import configmanager
+from projectinfo import ProjectInfo
 from pathlib import Path
 import sentences
 import section_titles
@@ -24,7 +25,7 @@ import usfmWriter
 
 config = None
 contributors = []
-sources = []
+projectInfo = None
 projects = []
 gui = None
 
@@ -496,32 +497,7 @@ def isBookFolder(path):
     chapterPath = os.path.join(path, '01')
     return os.path.isdir(chapterPath)
 
-relevantKeys = ['language_id', 'resource_id', 'version']
-
-# Returns True if the two sources represent the same resouce.
-def source_eq(src1, src2):
-    eq = True
-    for key in relevantKeys:
-        if src1[key] != src2[key]:
-            eq = False
-            break
-    return eq
-
-# Adds the specified source object to the global list if it is unique.
-def addSource(source):
-    global sources
-    unique = True
-    for src in sources:
-        if source_eq(src, source):
-            unique = False
-            break
-    if unique:
-        newsource = {}
-        for key in relevantKeys:
-            newsource[key] = source[key]
-        sources.append(newsource)
-
-# Extracts information from the specified manifest.
+# Extracts information from the specified manifest.json file.
 def parseManifest(path):
     bookId = ""
     try:
@@ -530,16 +506,19 @@ def parseManifest(path):
         reportError("   Can't open: " + path + "!")
     else:
         global contributors
-        global sources
         try:
             manifest = json.load(jsonFile)
         except ValueError as e:
             reportError("   Can't parse: " + path + ".")
         else:
+            language_id = manifest['target_language']['id']
+            if config['language_code'] != language_id:
+                reportError(f"Language code ({config['language_code']}) does not match Language Id ({language_id}) in {shortname(path)}.")
+            projectInfo.setLanguageName(manifest['target_language']['name'])
             bookId = manifest['project']['id']
             contributors += [x.title() for x in manifest['translators']]
             for source in manifest['source_translations']:
-                addSource(source)
+                projectInfo.addSource(source['language_id'], source['resource_id'], source['version'])
         jsonFile.close()
     return bookId.upper()
 
@@ -672,7 +651,7 @@ def dumpContributors(target_dir):
             if name:
                 f.write('    - "' + name + '"\n')
         f.write("\n  source:\n")
-        for src in sources:
+        for src in projectInfo.getSources():
             f.write( "    -\n")
             f.write(f"      identifier: '{src['resource_id']}'\n")
             f.write(f"      language: '{src['language_id']}'\n")
@@ -779,7 +758,11 @@ def main(app = None):
         target_dir = config['target_dir']
 
         Path(target_dir).mkdir(exist_ok=True)
+        global projectInfo
+        projectInfo = ProjectInfo(target_dir, config['language_code'])
+        projectInfo.resetSources()
         convert(source_dir, target_dir)
+        projectInfo.save()
     reportStatus("\nDone.")
     if gui:
         gui.event_generate('<<ScriptEnd>>', when="tail")
