@@ -11,6 +11,7 @@ import g_util
 import g_step
 import os
 import time
+from projectinfo import ProjectInfo
 
 stepname = 'VerifyUSFM'   # equals the main class name in this module
 
@@ -56,6 +57,8 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         self.std_titles = StringVar()
         self.compare_dir = StringVar()
         self.language_code.trace_add("write", self._onChangeLanguage)
+        self.source_dir.trace_add("write", self._onChangeSourceDir)
+        self.compare_dir.trace_add("write", self._onChangeCompareDir)
         self.suppress = [BooleanVar(value = False) for i in range(13)]
         self.suppress[6].trace_add("write", self._onChangeQuotes)
         self.suppress[7].trace_add("write", self._onChangeQuotes)
@@ -63,6 +66,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
             self.columnconfigure(col, weight=1)   # keep column 1 from expanding
         # self.rowconfigure(88, minsize=170, weight=1)  # let the message expand vertically
 
+        # language_code will be used for ProjectInfo soon in verifyUSFM.
         language_code_label = ttk.Label(self, text="Language code:", width=20)
         language_code_label.grid(row=3, column=1, sticky=(W,E,N), pady=2)
         language_code_entry = ttk.Entry(self, width=18, textvariable=self.language_code)
@@ -95,7 +99,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         compare_dir_entry = ttk.Entry(self, width=41, textvariable=self.compare_dir)
         compare_dir_entry.grid(row=6, column=2, columnspan=3, sticky=W)
         cmp_Tip = Hovertip(compare_dir_entry, hover_delay=500,
-             text="The source text used for this translation. (Optional - to find untranslated verses)")
+             text="The source text used for this translation. (Optional but recommended)")
         cmp_dir_find = ttk.Button(self, text="...", width=2, command=self._onFindCmpDir)
         cmp_dir_find.grid(row=6, column=4, sticky=W)
 
@@ -175,10 +179,15 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
 
     def show_values(self, values):
         self.values = values
-        self.language_code.set(values.get('language_code', fallback=""))
-        self.source_dir.set(values.get('source_dir', fallback=""))
+        code = values.get('language_code', fallback="")
+        dir = values.get('source_dir', fallback="")
+        cmp = values.get('compare_dir', fallback="")
+        self.language_code.set(code)
+        self.source_dir.set(dir)
+        self.compare_dir.set(cmp)
+        if dir and code:
+            self.compare_dir.set( self._getCompareValue(dir, code, cmp) )
         self.filename.set(values.get('filename', fallback=""))
-        self.compare_dir.set(values.get('compare_dir', fallback=""))
         self.std_titles.set(values.get('standard_chapter_title', fallback=""))
         for si in range(len(self.suppress)):
             configvalue = f"suppress{si}"
@@ -196,6 +205,15 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
             tip = "Automated USFM file cleanup"
         self.controller.showbutton(5, ">>>", tip=tip, cmd=self._onNext)
         self._set_button_status()
+
+    def _onExecute(self):
+        objections = self._invalidInputs()
+        if len(objections) == 0:
+            self._save_values()
+            self.controller.onExecute(self.values)
+        else:
+            for objection in objections:
+                self.message_area.insert('end', f"{objection}\n")
 
     def onScriptEnd(self):
         issuespath = os.path.join(self.values['source_dir'], "issues.txt")
@@ -215,13 +233,31 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         self.values['language_code'] = self.language_code.get()
         self.values['source_dir'] = self.source_dir.get()
         self.values['filename'] = self.filename.get()
-        self.values['compare_dir'] = self.compare_dir.get()
+        value = self.compare_dir.get()
+        self.values['compare_dir'] = "" if value.startswith("(locate") else value
         self.values['standard_chapter_title'] = self.std_titles.get()
         for si in range(len(self.suppress)):
             configvalue = f"suppress{si}"
             self.values[configvalue] = str(self.suppress[si].get())
         self.controller.mainapp.save_values(stepname, self.values)
         self._set_button_status()
+
+    # This function does more thorough input validation than _set_button_status() does.
+    # The user may need this help in identifying certain incorrect input(s).
+    def _invalidInputs(self):
+        objections = []
+        code = self.language_code.get()
+        dir = self.source_dir.get()
+        cmp = self.compare_dir.get()
+        if not code or not dir:
+            objections.append("Language code and usfm file folder are required.")
+        if not os.path.isdir(dir):
+            objections.append(f"{dir} is not a valid folder.")
+        if cmp and not os.path.isdir(cmp):
+            objections.append(f"Source text folder ({cmp}) is invalid.")
+        if cmp and cmp == dir:
+            objections.append(f"The usfm file folder ({dir})\n  can't be the same as its Source text folder.")
+        return objections
 
     # Executes a script that inventories the existing chapter labels
     def _onInventoryLabels(self, *args):
@@ -237,16 +273,33 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
             self.filename.set(os.path.basename(path))
 
     def _onFindCmpDir(self, *args):
+
         self.controller.askdir(self.compare_dir)
 
-    # When the language changes, set the ASCII content flag.
+    # When the language code changes, set the ASCII content flag.
     def _onChangeLanguage(self, *args):
-        nonascii_script = self.language_code.get() in {'am','apd','ar','arb','as','bn','bul',
+        code = self.language_code.get()
+        nonascii_script = code in {'', 'am','apd','ar','arb','as','bn','bul',
             'grc','gu','hi','kk','km','kn','ml','mr','my','nag','ne','or','pa','pcl',
             'pes','pnb','pnb-x-faqirparsi','rml','ru','ta','te','tg','th','thr','ur',
             'ur-deva','xal','zh'}
         self.suppress[9].set(not nonascii_script)
         self.suppress9_checkbox.state(['disabled'] if nonascii_script else ['!disabled'])
+        if code:
+            dir = self.source_dir.get()
+            cmp = self.compare_dir.get()
+            self.compare_dir.set( self._getCompareValue(dir, code, cmp) )
+        self._set_button_status()
+
+    def _onChangeSourceDir(self, *args):
+        dir = self.source_dir.get()
+        code = self.language_code.get()
+        cmp = self.compare_dir.get()
+        if dir and code:
+            self.compare_dir.set( self._getCompareValue(dir, code, cmp) )
+        self._set_button_status()
+
+    def _onChangeCompareDir(self, *args):
         self._set_button_status()
 
     def _onChangeQuotes(self, *args):
@@ -265,7 +318,8 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         path = os.path.join(self.source_dir.get(), self.filename.get())
         os.startfile(path)
 
-    def _set_button_status(self):
+    def _set_button_status(self, *args):
+        good_code = self.language_code.get()
         good_dir = os.path.isdir(self.source_dir.get())
         good_cmp = not self.compare_dir.get() or os.path.isdir(self.compare_dir.get())
         namedfile = self.filename.get()
@@ -273,7 +327,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         if good_dir and namedfile:
             filepath = os.path.join(self.source_dir.get(), namedfile)
             good_subject = os.path.isfile(filepath)
-        self.controller.enablebutton(2, good_subject and good_cmp)
+        self.controller.enablebutton(2, good_code and good_dir and good_cmp)
         if good_dir:
             title = namedfile if namedfile and good_subject else "Work folder"
             self.controller.showbutton(4, title, tip=f"Open {title}", cmd=self._onOpenUsfm)
@@ -282,3 +336,15 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
 
         issuespath = os.path.join(self.source_dir.get(), "issues.txt")
         self.controller.enablebutton(3, os.path.isfile(issuespath))
+
+    # Returns the most reasonable new value for compare_dir,
+    # based on existence of valid project info, if any.
+    def _getCompareValue(self, dir, language_code, cmp):
+        if dir and language_code and (not cmp or cmp.startswith("(locate")):
+            if os.path.isdir(dir):
+                projectInfo = ProjectInfo(dir, language_code)
+                if src := projectInfo.getMainSource():
+                    cmp = f"(locate folder containing {src['language_id']}_{src['resource_id']}, vrsn ~{src['version']})"
+                elif cmp:
+                    cmp = ""
+        return cmp
