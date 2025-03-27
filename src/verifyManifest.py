@@ -58,12 +58,10 @@ import configmanager
 from datetime import datetime
 from datetime import date
 from datetime import timedelta
-import pathlib
 import sys
 import os
-import yaml
+from manifestyaml import ManifestYaml
 import io
-import codecs
 import numbers
 import re
 import usfm_verses
@@ -76,8 +74,6 @@ def getLanguageId():
 
 def expectAscii(language_id=None):
     expectAsciiTitles = config.getboolean('expectascii')
-    # if expectAsciiTitles == None and language_id:
-    #     expectAsciiTitles = (language_id in {'ceb','dan','en','es','es-419','fr','gl','ha','hr','id','ilo','kvb','lko','ngp','plt','pmy','pt-br','ruc','tl','tpi'})
     return expectAsciiTitles
 
 # Writes error message to stderr.
@@ -90,7 +86,7 @@ def reportError(msg):
 
 # Writes warnings message to stderr.
 def reportWarning(msg):
-    reportError("Possible error (please check): " + msg)
+    reportError("Potential error. Please check: " + msg)
 
 def reportStatus(msg):
     reportToGui(msg)
@@ -109,7 +105,7 @@ def stream(msg, msgtype, stream):
         stream.write(msg + "\n")
     except UnicodeEncodeError as e:
         stream.write(f"{msgtype} message not shown, contains Unicode.\n")
-    
+
 # Returns the number of .usfm files in the manifest directory.
 def countBookDirs():
     n = 0
@@ -361,7 +357,7 @@ def verifyDates(issued, modified):
 def verifyDir(dirpath):
     path = os.path.join(dirpath, "manifest.yaml")
     if os.path.isfile(path):
-        verifyFile(path)
+        verifyFile(dirpath)
         verifyOtherFiles()
         verifyCleanDir(dirpath)
         if projtype == 'ta':
@@ -380,16 +376,17 @@ def verifyDir(dirpath):
         reportError(f"There is no manifest.yaml file in: {dirpath}.\nCancelled further checking.")
 
 # Manifest file verification
-def verifyFile(path):
-    manifest = parseYaml(path)
+def verifyFile(dir):
+    manifest = yamlcontents(dir, "manifest.yaml")
     try:
         verifyKeys("", manifest, ['dublin_core', 'checking', 'projects'])
         verifyCore(manifest['dublin_core'])
         verifyChecking(manifest['checking'])
         verifyProjects(manifest['projects'], manifest['dublin_core']['language']['identifier'])
     except TypeError as e:
-        reportError(f"Syntax error in {os.path.relpath(path, manifestDir)}: \"{str(e)}.\"")
-        reportError("    -- If you can't find the mistake, use an online yaml checker, like yamllint.com.")
+        reportError(f"Syntax error in manifest.yaml: \"{str(e)}.\"")
+        reportError("    -- It most likely involves quotes around strings.")
+        reportError("    -- If you can't find the mistake, it may help to use an online yaml checker, like yamllint.com.")
 
 # Verifies format field is a valid string, depending on project type.
 # Done with iev, irv, isv, obs, obs-tn, obs-tq, obs-sn, obs-sq, reg, ta, tq, tn, tw, tsv, ulb, udb, ust
@@ -458,14 +455,12 @@ def verifyLanguage(language):
 
 # For OBS projects, verify that media.yaml is valid.
 def verifyMediaYaml(dirpath):
-    yamlpath = os.path.join(dirpath, "media.yaml")
-    if contents := parseYaml(yamlpath):
+    if contents := yamlcontents(dirpath, "media.yaml"):
         try:
             verifyKeys("", contents, ['projects'])
             verifyProjectsOBS(contents['projects'])
         except TypeError as e:
             reportError(f"Syntax error in media.yaml: \"{str(e)}.\"")
-
 
 # Verify media entry from OBS media.yaml file
 def verifyMedium(medium):
@@ -613,7 +608,7 @@ def verifyProjectsBible(projects, language_code):
     verifyBookTitlePairs(projects, '1jn', '2jn')
     verifyBookTitlePairs(projects, '1jn', '3jn')
     verifyBookTitlePairs(projects, '2jn', '3jn')
-    
+
 # Verify one project of an OBS media.yaml file
 def verifyProjectOBS(project):
     if project['identifier'] in {'obs','obs-tn','obs-tq'}:
@@ -625,7 +620,6 @@ def verifyProjectOBS(project):
                 verifyMedium(medium)
     else:
         reportError("Unknowns identifier in media.yaml: " + project['identifier'])
-
 
 # Verify the projects section of an OBS media.yaml file, which is the only section
 def verifyProjectsOBS(projects):
@@ -672,8 +666,6 @@ def verifyRelation(rel):
             if parts[1] not in {'obs','obs-tn','obs-tq','obs-sn','obs-sq','tn','tq','tw','ta','tm'} and not isBibleType(parts[1]):
                 if parts[1][0:4] != 'ugnt' and parts[1][0:3] != 'uhb':
                     reportError("Invalid project code in relation element: " + rel)
-            #if parts[1] == projtype or (projtype == 'tn-tsv' and parts[1] == 'tn'):
-                #reportError("Project code in relation element is same as current project: " + rel)
 
 # The relation element is a list of strings.
 def verifyRelations(relations):
@@ -681,11 +673,11 @@ def verifyRelations(relations):
     if len(uniq) < len(relations):
         reportError("There are duplicates in the relations list")
     if len(uniq) < 2 and not isBibleType(projtype) and projtype != 'obs':
-        reportWarning("The relations list seems incomplete")
+        reportWarning("The relations list seems incomplete.")
     ugnt = False
     uhb = False
     if len(relations) < 1 and projtype != 'reg':
-        reportWarning("No relations are listed")
+        reportWarning("No relations are listed.")
     for r in relations:
         verifyRelation(r)
         if projtype == 'tn-tsv':
@@ -800,8 +792,9 @@ def verifyTitleFiles(folder):
                     if not os.path.isfile(path):
                         reportError("Missing file: " + os.path.relpath(path, manifestDir))
 
-def verifyTWfiles(path):
-    parseYaml( os.path.join(os.path.join(path, "bible"), "config.yaml") )
+# For now, simply reports whether the config.yaml file is parseable.
+def verifyTWfiles(dir):
+    yamlcontents(os.path.join(dir, "bible"), "config.yaml")
 
 # Returns number of ASCII titles found in toc.yaml files (tA projects only).
 # Reports non-ASCII links as errors.
@@ -819,35 +812,25 @@ def verifyTocYaml(contents, tocpath):
         reportError(f"Non-ASCII link ({contents['link']}) in {tocpath}")
     return nAsciiTitles
 
-# Loads the specified yaml file and reports errors.
+# Loads the yaml file and reports errors.
 # Returns the contents of the file if no errors.
-def parseYaml(path):
-    contents = None
-    if os.path.isfile(path):
-        if has_bom(path):
-            reportError(f"{path} file has a Byte Order Mark. Remove it.")
-        with io.open(path, "tr", encoding='utf-8-sig') as file:
-            try:
-                contents = yaml.safe_load(file)
-            except yaml.scanner.ScannerError as e:
-                reportError(f"Yaml syntax error at or before line {e.problem_mark.line} in: {os.path.relpath(path, manifestDir)}")
-            except yaml.parser.ParserError as e:
-                reportError(f"Yaml parsing error at or before line {e.problem_mark.line} in: {os.path.relpath(path, manifestDir)}")
-    else:
-        reportError(f"File missing: {os.path.relpath(path, manifestDir)}")
-    return contents
+def yamlcontents(dir, filename):
+    my = ManifestYaml(dir, filename)
+    errors = my.load()
+    for error in errors:
+        reportError(error)
+    return my.contents if not errors else None
 
 # For tA projects, verify that each folder has a valid toc.yaml and config.yaml file.
 def verifyYamls(folderpath):
-    parseYaml( os.path.join(folderpath, "config.yaml") )    # just to check for yaml errors
-    tocpath = os.path.join(folderpath, "toc.yaml")
-    if contents := parseYaml(tocpath):
+    yamlcontents(folderpath, "config.yaml")
+    if contents := yamlcontents(folderpath, "toc.yaml"):
         try:
-            nAsciiTitles = verifyTocYaml(contents, os.path.relpath(tocpath, manifestDir))
+            nAsciiTitles = verifyTocYaml(contents, "toc.yaml")
             if nAsciiTitles > 0 and not expectAscii(getLanguageId()):
-                reportWarning(f"{nAsciiTitles} likely untranslated titles in {os.path.relpath(tocpath, manifestDir)}")
+                reportWarning(f"{nAsciiTitles} likely untranslated titles in toc.yaml")
         except TypeError as e:
-            reportError(f"Syntax error in {os.path.relpath(tocpath, folderpath)}: \"{str(e)}.\"")
+            reportError(f"Syntax error in toc.yaml: \"{str(e)}.\"")
 
 def verifyType(type):
     failure = False
@@ -875,15 +858,6 @@ def verifyVersion(version, sourceversion):
         reportError("White space in source:version")
     if projtype == 'obs':
         reportStatus("Verify that the version number listed in front/intro.md is: " + version + "\n")
-
-# Returns True if the file has a BOM
-def has_bom(path):
-    with open(path, 'rb') as f:
-        raw = f.read(4)
-    for bom in [codecs.BOM_UTF8, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE, codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE]:
-        if raw.startswith(bom):
-            return True
-    return False
 
 def verifyManifest():
     global config
