@@ -32,10 +32,10 @@ class VerifyManifest(g_step.Step):
 class VerifyManifest_Frame(g_step.Step_Frame):
     def __init__(self, parent, controller):
         super().__init__(parent,controller)
-        # self.controller = controller
 
         self.source_dir = StringVar()
         self.source_dir.trace_add("write", self._onChangeEntry)
+        self.bibletype = BooleanVar(value = True)
         self.expectAscii = BooleanVar(value = False)
         for col in (3,5):
             self.columnconfigure(col, weight=1)   # keep columns 1,4 from expanding
@@ -49,9 +49,15 @@ class VerifyManifest_Frame(g_step.Step_Frame):
         src_dir_find = ttk.Button(self, text="...", width=2, command=self._onFindSrcDir)
         src_dir_find.grid(row=4, column=3, sticky=W, padx=5)
 
-        expectAscii_checkbox = ttk.Checkbutton(self, text=r'Expect ASCII', variable=self.expectAscii,
+        bibletype_checkbox = ttk.Checkbutton(self, text='Bible', variable=self.bibletype,
                                              onvalue=True, offvalue=False)
-        expectAscii_checkbox.grid(row=5, column=1, sticky=W)
+        bibletype_checkbox.grid(row=5, column=1, sticky=W)
+        bibletype_Tip = Hovertip(bibletype_checkbox, hover_delay=500,
+             text="Is the resource a Bible or Bible portion (as opposed to OBS, Notes, etc)?")
+
+        expectAscii_checkbox = ttk.Checkbutton(self, text='Expect ASCII', variable=self.expectAscii,
+                                             onvalue=True, offvalue=False)
+        expectAscii_checkbox.grid(row=5, column=2, sticky=W)
         expectAscii_Tip = Hovertip(expectAscii_checkbox, hover_delay=500,
              text=r"Suppress warnings about ASCII book titles, etc")
 
@@ -63,12 +69,8 @@ class VerifyManifest_Frame(g_step.Step_Frame):
     def show_values(self, values):
         self.values = values
         self.source_dir.set(values.get('source_dir', fallback = ""))
-        if not values.get('expectascii'):
-            # This is a workaround for my bug in configmanager.py
-            # I should be able to remove it after everyone has used verifyManifest once.
-            self.expectAscii.set(False)
-        else:
-            self.expectAscii.set(values.get('expectascii', fallback = False))
+        self.bibletype.set(values.get('bibletype', fallback = True))
+        self.expectAscii.set(values.get('expectascii', fallback = False))
 
         # Create buttons
         self.controller.showbutton(1, "<<<", tip="Previous step", cmd=self._onBack)
@@ -87,8 +89,8 @@ class VerifyManifest_Frame(g_step.Step_Frame):
 
     def _save_values(self):
         self.values['source_dir'] = self.source_dir.get()
+        self.values['bibletype'] = str(self.bibletype.get())
         self.values['expectascii'] = str(self.expectAscii.get())
-        self.values['bibletype'] = "True"
         self.controller.mainapp.save_values(stepname, self.values)
         self._set_button_status()
 
