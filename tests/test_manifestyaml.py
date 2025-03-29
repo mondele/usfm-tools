@@ -9,37 +9,159 @@ src_path = os.path.join(os.path.dirname(tests_path), "src")
 sys.path.append(src_path)
 from manifestyaml import ManifestYaml
 
-dir = r'C:\DCS\Bangwinji\work'
-language_code = 'bsj'
-language_name = 'Bangwinji'
+dir = r'C:\DCS\Test\test_reg'
+language_code = 'test'
+language_name = 'Test Language'
 
-def test_loadsave():
-    manifest1 = ManifestYaml(dir)
-    assert manifest1.load() == []
-    assert manifest1.contents['checking']['checking_level'] == '1'
-    manifest1.save()
-    manifest2 = ManifestYaml(dir)
-    assert manifest2.load() == []
-    assert manifest1.contents == manifest2.contents
+def test_all():
+    init_newfile()
+    addContributors()
+    dates()
+    sources()
+    replaceSources()
+    addProjects()
+    addRelations()
 
-def test_dates():
-    manifest = ManifestYaml(dir, filename="test.yaml")
-    manifest.create()
-    manifest.save()
-    manifest2 = ManifestYaml(dir, filename="test.yaml")
-    manifest2.load()
-    assert manifest2.contents['dublin_core']['issued'] == "2025-03-31"
-    manifest.setDates()
-    manifest.save()
-    manifest2.load()
-    from datetime import datetime
-    assert manifest2.contents['dublin_core']['issued'] == datetime.today().strftime('%Y-%m-%d')
+def init_newfile():
+    # This test function backs up the existing .json file before deleting it.
+    path = os.path.join(dir, 'manifest.yaml')
+    bakpath = path + ".bak"
+    if os.path.exists(path):
+        if not os.path.exists(bakpath):
+            os.rename(path, bakpath)
+        else:
+            os.remove(path)
+    my = ManifestYaml()
+    my.create(dir)
+    my.setLanguage(language_code, language_name, 'rtl')
+    my.save()
+    assert my.contents['dublin_core']['language']['identifier'] == language_code
+    my2 = ManifestYaml()
+    assert my2.load(dir) == []
+    assert my2.contents['dublin_core']['language']['title'] == language_name
 
-def test_quotes():
-    manifest = ManifestYaml(dir, filename="test.yaml")
-    manifest.load()
-    manifest.setLanguageName("Bang'winji")
-    manifest.save()
-    manifest2 = ManifestYaml(dir, filename="test.yaml")
-    manifest2.load()
-    assert manifest2.contents['dublin_core']['language']['title'] == "Bang'winji"
+# Creates a new manifest file, with contributors.
+def addContributors():
+    my = ManifestYaml()
+    my.create(dir)
+    my.setLanguage(language_code, language_name, 'rtl')
+    my.addContributor('david')
+    my.addContributor('David')
+    assert len(my.contents['dublin_core']['contributor']) == 1
+    con = my.contents['dublin_core']['contributor'][0]
+    assert con == 'David'
+    my.addContributor('O\'Shea')
+    assert len(my.contents['dublin_core']['contributor']) == 2
+    con = my.contents['dublin_core']['contributor'][1]
+    assert con == 'O\'Shea'
+    my.addContributor('Allen')
+    my.save()
+    my2 = ManifestYaml()
+    my2.load(dir)
+    assert len(my2.contents['dublin_core']['contributor']) == 3
+    con = my2.contents['dublin_core']['contributor'][0]
+    assert con == 'Allen'
+    con = my2.contents['dublin_core']['contributor'][1]
+    assert con == 'David'
+    con = my2.contents['dublin_core']['contributor'][2]
+    assert con == 'O\'Shea'
+
+def dates():
+    my = ManifestYaml()
+    date = "2025-01-01"
+    if errors := my.load(dir):
+        my.create(dir)
+    my.setDates(date)
+    my.save()
+    my2 = ManifestYaml()
+    assert my2.load(dir) == []
+    assert my2.contents['dublin_core']['issued'] == date
+    assert my2.contents['dublin_core']['modified'] == date
+    con = my2.contents['dublin_core']['contributor'][2]
+    assert con == 'O\'Shea'
+
+def sources():
+    my = ManifestYaml()
+    if errors := my.load(dir):
+        my.create(dir)
+    my.addSource('en', 'ulb', '12')
+    assert len(my.contents['dublin_core']['source']) == 1
+    src = my.contents['dublin_core']['source'][0]
+    assert src['language'] == 'en'
+    assert src['identifier'] == 'ulb'
+    assert src['version'] == '12'
+    assert my.contents['dublin_core']['version'] == ""
+
+    my.addSource('en', 'ulb', '12') # try to add same source again
+    assert len(my.contents['dublin_core']['source']) == 1
+    my.addSource('am', 'udb', '1') # try to add another source
+    assert len(my.contents['dublin_core']['source']) == 2
+    src = my.contents['dublin_core']['source'][1]
+    assert src['language'] == 'am'
+    assert src['identifier'] == 'udb'
+    assert src['version'] == '1'
+    my.addSource('en', 'ulb', 'WA12') # try to add same source again
+    assert len(my.contents['dublin_core']['source']) == 3
+    my.setVersion("12.1")
+    my.save()
+    my2 = ManifestYaml()
+    my2.load(dir)
+    assert len(my2.contents['dublin_core']['source']) == 3
+    src = my2.contents['dublin_core']['source'][0]
+    assert src['language'] == 'en'
+    assert src['identifier'] == 'ulb'
+    assert src['version'] == '12'
+    assert my2.contents['dublin_core']['version'] == "12.1"
+
+def replaceSources():
+    my = ManifestYaml()
+    if errors := my.load(dir):
+        my.create(dir)
+    my.resetSources()
+    my.setVersion("")
+    assert my.contents['dublin_core']['version'] == ""
+    assert len(my.contents['dublin_core']['source']) == 0
+    my.addSource('en', 'ulb', '12') # try to add same source again
+    assert len(my.contents['dublin_core']['source']) == 1
+    assert my.contents['dublin_core']['version'] == ""
+    my.setVersion("12.2")
+    my.save()
+    my2 = ManifestYaml()
+    my2.load(dir)
+    assert len(my2.contents['dublin_core']['source']) == 1
+    src = my2.contents['dublin_core']['source'][0]
+    assert src['language'] == 'en'
+    assert src['identifier'] == 'ulb'
+    assert src['version'] == '12'
+    assert my2.contents['dublin_core']['version'] == "12.2"
+
+def addProjects():
+    my = ManifestYaml()
+    if errors := my.load(dir):
+        my.create(dir)
+    proj66 = {'title': 'Revelation', 'versification': 'ufw', 'identifier': 'rev',
+            'sort': 66, 'path': './67-REV.usfm', 'categories': [ 'bible-nt' ] }
+    proj1 = {'title': 'Matthew', 'versification': 'ufw', 'identifier': 'mat',
+            'sort': 40, 'path': './41-MAT.usfm', 'categories': [ 'bible-nt' ] }
+    my.addProject(proj66)
+    my.addProject(proj1)
+    my.save()
+    my2 = ManifestYaml()
+    my2.load(dir)
+    assert len(my2.contents['projects']) == 2
+    assert my2.contents['projects'][0] == proj1
+    assert my2.contents['projects'][1] == proj66
+
+def addRelations():
+    my = ManifestYaml()
+    if errors := my.load(dir):
+        my.create(dir)
+    my.addRelation(language_code, 'reg')
+    my.addRelation(language_code, 'tn')
+    my.addRelation(language_code, 'reg')
+    my.save()
+    my2 = ManifestYaml()
+    my2.load(dir)
+    assert len(my2.contents['dublin_core']['relation']) == 2
+    assert my2.contents['dublin_core']['relation'][0] == language_code + "/" + "reg"
+    assert my2.contents['dublin_core']['relation'][1] == language_code + "/" + "tn"

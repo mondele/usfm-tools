@@ -11,23 +11,22 @@ import os
 import io
 import yaml
 import codecs
+import operator
 
 class ManifestYaml:
-    def __init__(self, project_dir, filename="manifest.yaml"):
-        self.project_dir = project_dir
-        self.path = os.path.join(project_dir, filename)
+    # Creates manifest.yaml file if it doesn't already exist, or fails to load.
+    # Sets self.contents.
+    def __init__(self):
         self.contents = None
+        self.path = ""
 
     def __repr__(self):
         return f'ManifestYaml({self.project_dir})'
 
-    def exists(self):
-        return os.path.isfile(self.path)
-
-    # Loads the existing manifest file if it exists.
-    # The content is stored internally as a dict structure.
+    # Loads specified file and sets self.contents.
     # Returns list of error strings if not successful.
-    def load(self):
+    def load(self, project_dir, filename="manifest.yaml"):
+        self.path = os.path.join(project_dir, filename)
         errors = []
         if os.path.isfile(self.path):
             if has_bom(self.path):
@@ -43,30 +42,42 @@ class ManifestYaml:
             errors.append(f"File not found: {self.path}")
         return errors
 
-    # Creates contents dict with default values for a resource container manifest.yaml file.
-    # Does not actually create the file until save() is called.
-    def create(self):
+    # Creates a resource container manifest.yaml file in the specified folder.
+    def create(self, project_dir: str):
         self.contents = {'dublin_core': {'conformsto': 'rc0.2', 'contributor': [],
 'creator': 'Bible translation community', 'description': 'An unrestricted literal Bible',
 'format': 'text/usfm', 'identifier': 'reg', 'issued': '2025-03-31',
 'language': {'direction': '', 'identifier': '', 'title': ''}, 'modified': '2025-03-31',
 'publisher': 'Wycliffe Associates', 'relation': [], 'rights': 'CC BY-SA 4.0', 'source': [],
-'subject': 'Bible', 'title': 'Bible', 'type': 'bundle', 'version': '12'},
+'subject': 'Bible', 'title': 'Bible', 'type': 'bundle', 'version': ''},
 'checking': {'checking_entity': [], 'checking_level': '1'},
 'projects': []}
+        self.path = os.path.join(project_dir, "manifest.yaml")
+        self.save()
 
-    # Overwrites the current manifest.yaml file.
+    # Sorts the projects and contributors.
+    # [Over]writes the current manifest.yaml file.
+    # Does nothing if contents is not initialized.
     def save(self):
-        with io.open(self.path, "tw", encoding='utf-8', newline='\n') as file:
-            yaml.safe_dump(self.contents, file, default_style="'")
+        if self.path:
+            self.contents['projects'].sort(key=operator.itemgetter('sort'))
+            self.contents['dublin_core']['contributor'].sort()
+            with io.open(self.path, "tw", encoding='utf-8', newline='\n') as file:
+                # yaml.safe_dump(self.contents, file, default_flow_style=False, default_style="'")
+                yaml.safe_dump(self.contents, file)
 
     # Returns the current project information represented in manifest.
     def contents(self):
         return self.contents
 
-    def setLanguageName(self, name):
+    def setLanguage(self, id, name, direction):
         if self.contents and 'dublin_core' in self.contents:
+            self.contents['dublin_core']['language']['identifier'] = id
             self.contents['dublin_core']['language']['title'] = name
+            self.contents['dublin_core']['language']['direction'] = direction
+
+    # Sets the issued and modified dates to the specified value,
+    # or to the current date if not specified.
     def setDates(self, date=None):
         if self.contents and 'dublin_core' in self.contents:
             import datetime
@@ -74,6 +85,46 @@ class ManifestYaml:
                 date = datetime.datetime.today().strftime('%Y-%m-%d')
             self.contents['dublin_core']['issued'] = date
             self.contents['dublin_core']['modified'] = date
+
+    def setResourceType(self, rsrc_id):
+        if self.contents and 'dublin_core' in self.contents:
+            self.contents['dublin_core']['identifier'] = rsrc_id
+            self.addRelation(self.contents['dublin_core']['language']['identifier'], rsrc_id)
+
+    # If version is currently empty, sets it to vrsn.
+    # Resets version if vrsn is empty.
+    def setVersion(self, vrsn):
+        if self.contents and 'dublin_core' in self.contents:
+            if vrsn == "" or self.contents['dublin_core']['version'] == "":
+                self.contents['dublin_core']['version'] = vrsn
+
+    def resetSources(self):
+        if self.contents and 'dublin_core' in self.contents:
+            self.contents['dublin_core']['source'].clear()
+    # Appends source to the source list if it is not already present there.
+    # Also sets target resource version if it is not already set.
+    def addSource(self, lang, resource, version):
+        if self.contents and 'dublin_core' in self.contents:
+            src = {'identifier': resource, 'language': lang, 'version': version}
+            if not src in self.contents['dublin_core']['source']:
+                self.contents['dublin_core']['source'].append(src)
+
+    # Converts contributor to title case and adds it to the list, if unique.
+    def addContributor(self, contributor):
+        candidate = contributor.title()
+        if not candidate in self.contents['dublin_core']['contributor']:
+            self.contents['dublin_core']['contributor'].append(candidate)
+
+    def addProject(self, project):
+        ids = [proj['identifier'] for proj in self.contents['projects']]
+        if not project['identifier'] in ids:
+            self.contents['projects'].append(project)
+
+    def addRelation(self, lang, rsrc):
+        relation = lang + "/" + rsrc
+        rels = self.contents['dublin_core']['relation']
+        if not relation in rels:
+            self.contents['dublin_core']['relation'].append(relation)
 
 # Returns True if the file has a BOM
 def has_bom(path):
