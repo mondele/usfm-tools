@@ -11,18 +11,22 @@
 import json
 import os
 import io
+import operator
+from manifestyaml import ManifestYaml
 
 class ProjectInfo:
     def __init__(self, project_dir, language_code):
-        self.project_dir = project_dir
+        self.project_dir = project_dir      # will need self.project_dir for manifest support
+        # self.confirmed = False
         self.info = self.configpath = None
+        self.manifest = None
         if os.path.exists( os.path.dirname(project_dir) ):
             self.configpath = os.path.join(os.path.dirname(project_dir), language_code+".json")
             if os.path.isfile(self.configpath):
                 with io.open(self.configpath, 'r') as json_file:
                     self.info = json.load(json_file)
-                assert 'language' in self.info
                 assert 'source_translations' in self.info
+                # self.confirmed = ('language' in self.info and language_code != "")
         if not self.info:
             self.info = {'language': {'id': language_code},
                         'source_translations': [] }
@@ -30,14 +34,36 @@ class ProjectInfo:
     def __repr__(self):
         return f'ProjectInfo({self.configpath})'
 
+    # Loads the manifest file, if any.
+    # Does not report any load errors, but creates a template yaml in that case.
+    # Sets the language code in the manifest.
+    # Controls whether the manifest is updated by subsequent calls.
+    def useManifest(self, use=True):
+        if use:
+            self.manifest = ManifestYaml()
+            errors = self.manifest.load(self.project_dir)
+            if len(errors) > 0:
+                self.manifest.create(self.project_dir)
+        else:
+            self.manifest = None
+
     # Saves the current information in the project json file.
+    # Implicitly saves the manifest file also, if it is in use.
     def save(self):
-        self.info['source_translations'].sort(reverse=True, key=count)    # sorts in place
+        self.info['source_translations'].sort(reverse=True, key=operator.itemgetter('count'))    # sorts in place
         with io.open(self.configpath, 'w') as json_file:
             json.dump(self.info, json_file, indent=4)
+            # self.confirmed = (self.info['language']['id'] != "")
+        if self.manifest:
+            if mainsource := self.getMainSource():
+                self.manifest.setVersion(mainsource['version'])
+            self.manifest.setDates()
+            self.manifest.save()
 
-    def setLanguageName(self, name):
+    def setLanguage(self, name, direction):
         self.info['language']['name'] = name
+        if self.manifest:
+            self.manifest.setLanguage(self.info['language']['id'], name, direction)
     def getLanguageCode(self):
         return self.info['language']['id']
     def getLanguageName(self):
@@ -45,7 +71,10 @@ class ProjectInfo:
 
     # Overwrites the list of source translations
     def resetSources(self):
-        self.info['source_translations'] = []
+        self.info['source_translations'].clear()
+        if self.manifest:
+            self.manifest.resetSources()
+            self.manifest.setVersion("")
     def addSource(self, language_id, resource_id, version):
         source = None
         assert 'source_translations' in self.info
@@ -57,13 +86,16 @@ class ProjectInfo:
                                                     'resource_id': resource_id,
                                                     'version': version,
                                                     'count': 1} )
+        if self.manifest:
+            self.manifest.addSource(language_id, resource_id, version)
+
     # This function is temporary, until the manifest.yaml is implemented
     def getSources(self):
         return self.info['source_translations']
     def getMainSource(self):
         mainsource = None
         if len(self.info['source_translations']) > 0:
-            self.info['source_translations'].sort(reverse=True, key=count)
+            self.info['source_translations'].sort(reverse=True, key=operator.itemgetter('count'))
             mainsource = self.info['source_translations'][0]
         return mainsource
 
@@ -77,5 +109,15 @@ class ProjectInfo:
                 break
         return found
 
-def count(source):
-    return source['count']
+    def setResourceType(self, id):
+        if self.manifest:
+            self.manifest.setResourceType(id)
+
+    def addContributors(self, contributors):
+        if self.manifest:
+            for contributor in contributors:
+                self.manifest.addContributor(contributor)
+
+    def addProject(self, project):
+        if self.manifest:
+            self.manifest.addProject(project)

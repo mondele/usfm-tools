@@ -23,6 +23,7 @@ def test_init_newfile():
         else:
             os.remove(path)
     projectInfo = ProjectInfo(dir, language_code)
+    projectInfo.useManifest()
     assert projectInfo.getLanguageCode() == language_code
     projectInfo.save()
     assert projectInfo.getLanguageCode() == language_code
@@ -48,7 +49,7 @@ def test_init_oldfile():
 
 def test_language_name():
     projectInfo = ProjectInfo(dir, language_code)
-    projectInfo.setLanguageName(language_name)
+    projectInfo.setLanguage(language_name, 'rtl')
     projectInfo.save()
     assert projectInfo.getLanguageName() == language_name
 
