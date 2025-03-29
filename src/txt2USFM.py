@@ -24,9 +24,7 @@ import usfmWriter
 # from line_profiler import LineProfiler
 
 config = None
-contributors = []
 projectInfo = None
-projects = []
 gui = None
 
 verseMarker_re = re.compile(r'[ \n\t]*\\v *([\d]{1,3})', re.UNICODE)
@@ -55,7 +53,6 @@ def reportToGui(msg, event):
         with gui.progress_lock:
             gui.progress = msg if not gui.progress else f"{gui.progress}\n{msg}"
         gui.event_generate(event, when="tail")
-
 
 # Does preliminary cleanup on the text file, prior to conversion.
 # Calls ensureMarkers() to put in missing chapter and verse markers.
@@ -505,7 +502,7 @@ def parseManifest(path):
     except IOError as e:
         reportError("   Can't open: " + path + "!")
     else:
-        global contributors
+        # global contributors
         try:
             manifest = json.load(jsonFile)
         except ValueError as e:
@@ -514,18 +511,20 @@ def parseManifest(path):
             language_id = manifest['target_language']['id']
             if config['language_code'] != language_id:
                 reportError(f"Language code ({config['language_code']}) does not match Language Id ({language_id}) in {shortname(path)}.")
-            projectInfo.setLanguageName(manifest['target_language']['name'])
+            projectInfo.setLanguage(manifest['target_language']['name'], manifest['target_language']['direction'])
             bookId = manifest['project']['id']
-            contributors += [x.title() for x in manifest['translators']]
+            # contributors += [x.title() for x in manifest['translators']]
+            projectInfo.addContributors(manifest['translators'])
             for source in manifest['source_translations']:
                 projectInfo.addSource(source['language_id'], source['resource_id'], source['version'])
+            projectInfo.setResourceType(manifest['resource']['id'])
         jsonFile.close()
     return bookId.upper()
 
 # Parses all manifest.json files in the current folder.
 # If more than one manifest.json, their names vary.
 # Return upper case bookId, or empty string if failed to retrieve.
-# Also parses translator names out of the manifest, adds to global contributors list.
+# Also parses translator names out of the manifest, adds to projectInfo.
 def getBookId(folder):
     bookId = None
     for file in os.listdir(folder):
@@ -562,32 +561,16 @@ def getBookTitle(folder):
 
 # Appends information about the current book to the global projects list.
 def appendToProjects(bookId, bookTitle):
-    global projects
-    testament = 'nt'
+    global projectInfo
+    category = 'bible-nt'
     if usfm_verses.verseCounts[bookId]['sort'] < 40:
-        testament = 'ot'
-    project = { "title": bookTitle, "id": bookId.lower(), "sort": usfm_verses.verseCounts[bookId]["sort"], \
-                "path": "./" + makeUsfmFilename(bookId), "category": "[ 'bible-" + testament + "' ]" }
-    projects.append(project)
-
-def dumpProjects(target_dir):
-    path = makeManifestPath(target_dir)
-    if len(projects) > 1 or not os.path.exists(path):
-        manifest = io.open(path, "tw", buffering=1, encoding='utf-8', newline='\n')
-        manifest.write("projects:\n")
-        projects.sort(key=operator.itemgetter('sort'))
-        for p in projects:
-            manifest.write("  -\n")
-            if not "'" in p['title']:
-                manifest.write("    title: '" + p['title'] + "'\n")
-            else:
-                manifest.write('    title: "' + p['title'] + '"\n')
-            manifest.write("    versification: ufw\n")
-            manifest.write("    identifier: '" + p['id'] + "'\n")
-            manifest.write("    sort: " + str(p['sort']) + "\n")
-            manifest.write("    path: '" + p['path'] + "'\n")
-            manifest.write("    categories: " + p['category'] + "\n")
-        manifest.close()
+        category = 'bible-ot'
+    elif usfm_verses.verseCounts[bookId]['sort'] > 66:
+        category = "periph"
+    project = { "title": bookTitle, "identifier": bookId.lower(), "sort": usfm_verses.verseCounts[bookId]["sort"], \
+                "path": "./" + makeUsfmFilename(bookId), "categories": [ category ],
+                 'versification': 'ufw' }
+    projectInfo.addProject(project)
 
 def shortname(longpath):
     source_dir = config['source_dir']
@@ -620,10 +603,6 @@ def makeUsfmFilename(bookId):
     filename = num + '-' + bookId + '.usfm'
     return filename
 
-# Returns path of temporary manifest file block listing projects converted
-def makeManifestPath(target_dir):
-    return os.path.join(target_dir, "projects.yaml")
-
 def writeHeader(usfm, bookId, bookTitle):
     usfm.writeUsfm("id", bookId)
     usfm.writeUsfm("ide", "UTF-8")
@@ -632,31 +611,6 @@ def writeHeader(usfm, bookId, bookTitle):
     usfm.writeUsfm("toc2", bookTitle)
     usfm.writeUsfm("toc3", bookId.lower())
     usfm.writeUsfm("mt", bookTitle)
-
-# Eliminates duplicates from contributors list and sorts them.
-# Outputs both the contributors and source resources to contributors.txt.
-def dumpContributors(target_dir):
-    path = os.path.join(target_dir, "contributors.txt")
-    if len(projects) > 1 or not os.path.exists(path):
-        global contributors
-        contribs = list(set(contributors))
-        contribs.sort()
-
-        f = io.open(path, 'tw', encoding='utf-8', newline='\n')
-        f.write("This file lists unique contributor names and source language resources\n")
-        f.write("gleaned from all the converted repos.\n")
-        f.write("These sections may be copied verbatim into the dublin_core section of the manifest.yaml file.\n\n")
-        f.write("  contributor:\n")
-        for name in contribs:
-            if name:
-                f.write('    - "' + name + '"\n')
-        f.write("\n  source:\n")
-        for src in projectInfo.getSources():
-            f.write( "    -\n")
-            f.write(f"      identifier: '{src['resource_id']}'\n")
-            f.write(f"      language: '{src['language_id']}'\n")
-            f.write(f"      version: '{src['version']}'\n")
-        f.close()
 
 # This method returns a list of chapter folders in the specified directory.
 # This list is returned in numeric order.
@@ -742,15 +696,11 @@ def convert(dir, target_dir):
             folder = os.path.join(dir, directory)
             if isBookFolder(folder):
                 convertFolder(folder)
-    dumpContributors(target_dir)
-    dumpProjects(target_dir)
 
 # Processes each directory and its files one at a time
 def main(app = None):
     global gui
     gui = app
-    contributors.clear()
-    projects.clear()
     global config
     config = configmanager.ToolsConfigManager().get_section('Txt2USFM')   # configmanager version
     if config:
@@ -760,6 +710,7 @@ def main(app = None):
         Path(target_dir).mkdir(exist_ok=True)
         global projectInfo
         projectInfo = ProjectInfo(target_dir, config['language_code'])
+        projectInfo.useManifest()
         projectInfo.resetSources()
         convert(source_dir, target_dir)
         projectInfo.save()
