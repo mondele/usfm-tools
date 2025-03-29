@@ -696,7 +696,7 @@ def verifyRelations(relations):
 # Validates the source field, which is an array of dictionaries.
 def verifySource(source):
     if not source or len(source) < 1:
-        reportError("Invalid source spec: should be an array of dictionary of three fields.")
+        reportError("Invalid source spec: should be a non-empty list of source texts.")
     for dict in source:
         verifyKeys("source[x]", dict, ['language', 'identifier', 'version'])
 
@@ -815,8 +815,8 @@ def verifyTocYaml(contents, tocpath):
 # Loads the yaml file and reports errors.
 # Returns the contents of the file if no errors.
 def yamlcontents(dir, filename):
-    my = ManifestYaml(dir, filename)
-    errors = my.load()
+    my = ManifestYaml()
+    errors = my.load(dir)
     for error in errors:
         reportError(error)
     return my.contents if not errors else None
