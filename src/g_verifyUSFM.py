@@ -219,13 +219,13 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         issuespath = os.path.join(self.values['source_dir'], "issues.txt")
         exists = os.path.isfile(issuespath)
         self.controller.enablebutton(3, exists)
+        self.controller.enablebutton(2, self.verify_ready)
         if exists:
             if time.time() - os.path.getmtime(issuespath) < 10:     # issues.txt is recent
                 self.message_area.insert('end', "issues.txt contains the list of issues found.\n")
                 self.message_area.insert('end', "Make corrections using your text editor, or go to\n  Next Step to do automated cleanup.\n")
                 self.message_area.see('end')
         self.message_area['state'] = DISABLED   # prevents insertions to message area
-        self.controller.enablebutton(2, True)
 
     # Copies current values from GUI into self.values dict, and calls mainapp to save
     # them to the configuration file.
@@ -240,7 +240,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
             configvalue = f"suppress{si}"
             self.values[configvalue] = str(self.suppress[si].get())
         self.controller.mainapp.save_values(stepname, self.values)
-        self._set_button_status()
+        # self._set_button_status()
 
     # This function does more thorough input validation than _set_button_status() does.
     # The user may need this help in identifying certain incorrect input(s).
@@ -273,7 +273,6 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
             self.filename.set(os.path.basename(path))
 
     def _onFindCmpDir(self, *args):
-
         self.controller.askdir(self.compare_dir)
 
     # When the language code changes, set the ASCII content flag.
@@ -327,7 +326,8 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         if good_dir and namedfile:
             filepath = os.path.join(self.source_dir.get(), namedfile)
             good_subject = os.path.isfile(filepath)
-        self.controller.enablebutton(2, good_code and good_dir and good_cmp)
+        self.verify_ready = good_code and good_dir and good_cmp
+        self.controller.enablebutton(2, self.verify_ready)
         if good_dir:
             title = namedfile if namedfile and good_subject else "Work folder"
             self.controller.showbutton(4, title, tip=f"Open {title}", cmd=self._onOpenUsfm)

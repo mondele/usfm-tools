@@ -166,7 +166,7 @@ class UsfmCleanup_Frame(g_step.Step_Frame):
 
     def onScriptEnd(self):
         self.message_area['state'] = DISABLED   # prevents insertions to message area
-        self.controller.enablebutton(2, True)
+        self.controller.enablebutton(2, self.cleanup_ready)
         nChanged = g_util.count_files(self.source_dir.get(), ".*\.usfm\.orig$")
         self.controller.enablebutton(4, nChanged > 0)
 
@@ -232,4 +232,5 @@ class UsfmCleanup_Frame(g_step.Step_Frame):
         if good_source and self.filename.get():
             path = os.path.join(self.source_dir.get(), self.filename.get())
             good_source = os.path.isfile(path)
+        self.cleanup_ready = good_source
         self.controller.enablebutton(2, good_source)
