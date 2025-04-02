@@ -253,6 +253,12 @@ class Buttons_Frame(Frame):
             self.button[psn].state(['disabled'])
         except:
             pass
+    # def enabled(self, psn):
+    #     try:
+    #         en = self.button[psn].instate(['!disabled'])
+    #     except:
+    #         en = False
+    #     return en
 
 def create_menu(wizard):
     wizard.option_add('*tearOff', FALSE)  # essential to have a normal menu
@@ -268,9 +274,11 @@ def create_menu(wizard):
     wizard['menu'] = menubar
 
 def read_the_docs(*args):
-    os.startfile(r'https://wycliffeassociatesinc-my.sharepoint.com/:w:/g/personal/larry_versaw_wycliffeassociates_org/EVOk8ijgv-hOkdNo2T--mmsBhlNzHiwDd2v3JQ44XN_Ciw?e=y6ww9j')
+    # os.startfile(r'https://wycliffeassociatesinc-my.sharepoint.com/:w:/g/personal/larry_versaw_wycliffeassociates_org/EVOk8ijgv-hOkdNo2T--mmsBhlNzHiwDd2v3JQ44XN_Ciw?e=y6ww9j')
+    os.startfile(r'https://wycliffeassociatesinc.sharepoint.com/:w:/s/AppDev/EU3UldmGC65FtOFAeYTWaXMBC7DjsjOibZttrHYrMH-j2g?e=9vUEk3')
 def version_history(*args):
-    os.startfile(r'https://wycliffeassociatesinc-my.sharepoint.com/:t:/g/personal/larry_versaw_wycliffeassociates_org/EfAjyDKzT85Dg27NcWhk-jABmk6a2K6jSlwIjc_ddfSWaA?e=sry9f0')
+    # os.startfile(r'https://wycliffeassociatesinc-my.sharepoint.com/:t:/g/personal/larry_versaw_wycliffeassociates_org/EfAjyDKzT85Dg27NcWhk-jABmk6a2K6jSlwIjc_ddfSWaA?e=sry9f0')
+    os.startfile(r'https://wycliffeassociatesinc.sharepoint.com/:t:/s/AppDev/EZ6n4YhoemVPt8i8mlxXxFUBNsVwHfRkvBkU_8Usi_IWag?e=dUoih0')
 def about(*args):
     configpath = wizard.config.config_path()
     messagebox.showinfo(title='About USFM Wizard', message=f"Version {app_version}",
