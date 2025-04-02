@@ -143,14 +143,29 @@ def addProjects():
             'sort': 66, 'path': './67-REV.usfm', 'categories': [ 'bible-nt' ] }
     proj1 = {'title': 'Matthew', 'versification': 'ufw', 'identifier': 'mat',
             'sort': 40, 'path': './41-MAT.usfm', 'categories': [ 'bible-nt' ] }
+    proj2 = {'title': 'Mark', 'versification': 'ufw', 'identifier': 'mrk',
+            'sort': 41, 'path': './42-MRK.usfm', 'categories': [ 'bible-nt' ] }
     my.addProject(proj66)
     my.addProject(proj1)
+    my.addProject(proj2)
     my.save()
     my2 = ManifestYaml()
     my2.load(dir)
-    assert len(my2.contents['projects']) == 2
+    assert len(my2.contents['projects']) == 3
     assert my2.contents['projects'][0] == proj1
-    assert my2.contents['projects'][1] == proj66
+    assert my2.contents['projects'][1] == proj2
+    assert my2.contents['projects'][2] == proj66
+    proj2a = {'title': 'Markus', 'versification': 'ufw', 'identifier': 'mrk',
+            'sort': 41, 'path': './42-MRK.usfm', 'categories': [ 'bible-nt' ] }
+    assert my2.contents['projects'][1] != proj2a
+    my2.addProject(proj2a)
+    assert len(my2.contents['projects']) == 3
+    my2.save()
+    my.load(dir)
+    assert len(my.contents['projects']) == 3
+    assert my.contents['projects'][0] == proj1
+    assert my.contents['projects'][1] == proj2a
+    assert my.contents['projects'][2] == proj66
 
 def addRelations():
     my = ManifestYaml()

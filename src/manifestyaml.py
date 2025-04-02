@@ -115,10 +115,12 @@ class ManifestYaml:
         if not candidate in self.contents['dublin_core']['contributor']:
             self.contents['dublin_core']['contributor'].append(candidate)
 
+    # Appends or replaces the specified project
     def addProject(self, project):
-        ids = [proj['identifier'] for proj in self.contents['projects']]
-        if not project['identifier'] in ids:
-            self.contents['projects'].append(project)
+        for i,proj in enumerate(self.contents['projects']):
+            if proj['identifier'] == project['identifier']:
+                self.contents['projects'].pop(i)
+        self.contents['projects'].append(project)
 
     def addRelation(self, lang, rsrc):
         relation = lang + "/" + rsrc
