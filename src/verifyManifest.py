@@ -511,13 +511,13 @@ def verifyProject(project, language_code):
     elif projtype in {'tn', 'tq'}:
         bookinfo = usfm_verses.verseCounts[project['identifier'].upper()]
         if project['sort'] != bookinfo['sort']:
-            reportError("Incorrect project:sort: " + str(project['sort']))
+            reportError(f"Incorrect {projtype} project:identifier or sort: {project['identifier']} - {str(project['sort'])}")
         if projtype == 'tn' and len(project['categories']) != 0:
             reportError("Categories list should be empty: project:categories")
     elif projtype == 'tn-tsv':
         bookinfo = usfm_verses.verseCounts[project['identifier'].upper()]
         if project['sort'] != bookinfo['sort']:
-            reportError("Incorrect project:sort: " + str(project['sort']))
+            reportError(f"Incorrect {projtype} project:sort: " + str(project['sort']))
         if project['versification'] != 'ufw':
             reportError("Invalid project:versification: " + project['versification'] + ". Should be 'ufw'")
         cat = project['categories'][0]
@@ -530,7 +530,7 @@ def verifyProject(project, language_code):
         verifyBookTitle(project['title'].strip(), project['identifier'], project['path'])
         bookinfo = usfm_verses.verseCounts[project['identifier'].upper()]
         if int(project['sort']) != bookinfo['sort']:
-            reportError("Incorrect project:sort: " + str(project['sort']))
+            reportError(f"Incorrect {projtype} project:identifier or sort: {project['identifier']} - {str(project['sort'])}")
         if project['versification'] != 'ufw':
             reportError("Invalid project:versification: " + project['versification'] + ". Should be 'ufw'")
         if len(project['identifier']) != 3:
