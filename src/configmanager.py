@@ -14,7 +14,7 @@ class ToolsConfigManager:
             case "Linux":
                 path = os.path.expanduser("~/.config/usfm_wizard")
             case "Darwin":
-                path = os.path.expanduser("~/AppData/Local/usfm_wizard")
+                path = os.path.expanduser("~/Library/ApplicationSupport/usfm_wizard")
         if not os.path.exists(path):
             os.mkdir(path)
         self.configpath = os.path.join(path, "tools_config.ini")
