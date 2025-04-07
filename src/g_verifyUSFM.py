@@ -58,7 +58,8 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         self.compare_dir = StringVar()
         self.language_code.trace_add("write", self._onChangeLanguage)
         self.source_dir.trace_add("write", self._onChangeSourceDir)
-        self.compare_dir.trace_add("write", self._onChangeCompareDir)
+        self.filename.trace_add("write", self._set_button_status)
+        self.compare_dir.trace_add("write", self._set_button_status)
         self.suppress = [BooleanVar(value = False) for i in range(13)]
         self.suppress[6].trace_add("write", self._onChangeQuotes)
         self.suppress[7].trace_add("write", self._onChangeQuotes)
@@ -298,9 +299,6 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
             self.compare_dir.set( self._getCompareValue(dir, code, cmp) )
         self._set_button_status()
 
-    def _onChangeCompareDir(self, *args):
-        self._set_button_status()
-
     def _onChangeQuotes(self, *args):
         if suppress_all := self.suppress[6].get():    # suppress all straight quotes
             self.suppress[7].set(True)
@@ -326,7 +324,7 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
         if good_dir and namedfile:
             filepath = os.path.join(self.source_dir.get(), namedfile)
             good_subject = os.path.isfile(filepath)
-        self.verify_ready = good_code and good_dir and good_cmp
+        self.verify_ready = good_code and good_subject and good_cmp
         self.controller.enablebutton(2, self.verify_ready)
         if good_dir:
             title = namedfile if namedfile and good_subject else "Work folder"
