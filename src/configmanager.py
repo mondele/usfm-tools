@@ -2,13 +2,19 @@
 # Config file manager
 
 from configparser import ConfigParser
-import os
+import os, platform
 import io
 
 class ToolsConfigManager:
     def __init__(self):
         # self.configpath = os.path.expanduser("~/Documents/tools_config.ini")
-        path = os.path.expanduser("~/AppData/Local/usfm_wizard")
+        match platform.system():
+            case "Windows":
+                path = os.path.expanduser("~/AppData/Local/usfm_wizard")
+            case "Linux":
+                path = os.path.expanduser("~/.config/usfm_wizard")
+            case "Darwin":
+                path = os.path.expanduser("~/AppData/Local/usfm_wizard")
         if not os.path.exists(path):
             os.mkdir(path)
         self.configpath = os.path.join(path, "tools_config.ini")
