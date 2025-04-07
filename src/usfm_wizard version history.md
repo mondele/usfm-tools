@@ -1,6 +1,15 @@
 # Usfm Wizard Version history
 
-## 1.3.5
+## 1.3.6
+* txt2Usfm - generate manifest.yaml file.
+* txt2Usfm - generate project info file with downstream benefits listed below.
+* verifyUsfm - strengthen GUI input validation.
+* verifyUsfm - show source text identification hint in GUI.
+* verifyManifest - expose the resource type option in the GUI.
+* verifyManifest - expanded some warning messages.
+* usfm_wizard - moved Help files to shared folder on OneDrive, still accessible from the Help menu.
+
+## 1.3.5 - 3/20/25
 * usfm_cleanup - remove periods after verse numbers.
 * usfm_cleanup - add chapter label finder function.
 * usfm_cleanup - remove standard fix options from GUI.
@@ -8,7 +17,7 @@
 * verifyUsfm - improve possible footnote recognition.
 * verifyUsfm - eliminated incorrect warning about needing paragraph marker after \s5.
 * verifyUsfm - eliminate some redundant warnings.
-* verifyUsfm - eliminate warnings about apparent footnotes between square brackets.  
+* verifyUsfm - eliminate warnings about apparent footnotes between square brackets.
 
 ## 1.3.4 - 3/6/25
 * verifyUsfm - use TSV file for wordlist.
