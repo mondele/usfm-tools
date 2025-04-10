@@ -42,7 +42,7 @@ import io
 import footnotes
 import usfm_verses
 import re
-import unicodedata
+from manifestyaml import ManifestYaml
 import usfm_utils
 import sentences
 import section_titles
@@ -64,8 +64,10 @@ class State:
         self.ID = ""
         self.reference = ""
         self.errorRefs = set()
-        self.sourcetext = {}
+        self.sourcetext = {}    # a dict, indexed by verse reference
         self.canContinue = True
+        self.footnotedVerses = {}
+        self.source_id = ""
         self.initBook()
 
     def initBook(self):
@@ -113,7 +115,7 @@ class State:
         self.reference = id + " header/intro"
         self.ID = id
         if scan:
-            self.sourcetext = {}
+            self.sourcetext.clear()
         elif id:
             self.IDs.append(id)
 
@@ -429,6 +431,7 @@ def reportProgress(msg):
 def reportStatus(msg):
     reportToGui('<<ScriptMessage>>', msg)
     write(msg, sys.stdout)
+    sys.stdout.flush()
 
 def reportToGui(event, msg):
     if gui:
@@ -574,21 +577,46 @@ def scan(token):
 def scanSourceFile(path):
     state.initBook()
     with io.open(path, "tr", encoding="utf-8-sig") as input:
-        str = input.read(-1)
-    tokens = parseUsfm.parseString(str)
+        contents = input.read(-1)
+    if "lemma=" in contents or "x-occurrences" in contents:
+        contents = usfm_utils.unalign_usfm(contents)
+    tokens = parseUsfm.parseString(contents)
     for token in tokens:
         scan(token)
 
+# Returns the language code and identifier as a string
+def identifySource(sourcedir):
+    my = ManifestYaml()
+    my.load(sourcedir)
+    language = my.getLanguage() # tuple of (id, name, direction)
+    if language:
+        id = language[0] + "_" + my.getIdentifier()
+    else:
+        id = ""
+    return id
+
 # Loads the source text for the current book if compare_dir is set.
 # Slow operation, it parses a usfm file and stores verse text in a dict.
+# @TODO combine the source text loading in this function with footnotes.scanFootnotes()
 def load_source(fname):
     sourcedir = config['compare_dir']
     if sourcedir:
+        state.source_id = identifySource(sourcedir)
+
+        # Load footnote references first, for the whole directory
+        if not footnotes.preScanned(sourcedir):
+            reportStatus(f"Please wait a minute or two while the source text is scanned\n\
+  for footnotes. This is a one time operation since\n\
+  the results are saved in a file.")
+            footnotes.scanFootnotes(sourcedir)
+
+        # Then parse the usfm for the current book.
         sourcepath = os.path.join(sourcedir, fname)
         if os.path.isfile(sourcepath):
             reportStatus(f"Loading source text...")
-            sys.stdout.flush()
             scanSourceFile(sourcepath)
+    if len(state.footnotedVerses) == 0:
+        state.footnotedVerses = footnotes.getFootnotedVerses()
 
 # Compares current verse to the source text
 # Returns Jaccard Similarity value, and number of words of length > 2 in common.
@@ -620,7 +648,6 @@ def longChunkCheck():
     max_chunk_length = 400  # set lower if this is ever needed again
     if not state.aligned_usfm and state.verse - (max_chunk_length-1) > state.startChunkVerse:
         reportError("Long chunk: " + state.startChunkRef + "-" + str(state.verse) + "   (" + str(state.verse-state.startChunkVerse+1) + " verses)", 4)
-
 
 # Verifies that at least one book title is specified, other than the English book title.
 # This method is called just before chapter 1 begins, so there has been every
@@ -880,7 +907,7 @@ def findFootnote(text, reference):
     flag = None
     if ref := reference_re.search(text):
         flag = ref.group(0)
-    elif ('(' in text or ')' in text) and (usfm_verses.isOptional(reference) or reference in footnotes.footnotedVerses):
+    elif ('(' in text or ')' in text) and (usfm_verses.isOptional(reference) or reference in state.footnotedVerses):
         # Don't suspect numbers in parens as being a footnote
         matches = parenNumber_re.findall(text)
         if text.count('(') > len(matches):     # not every paren includes a simple number
@@ -908,8 +935,9 @@ def reportFootnotes(text):
         if ':' in trigger:
             if not validBracketedFootnote(text):
                 reportError(f"Probable chapter:verse reference ({trigger}) at {reference} belongs in a footnote", 43)
-        elif usfm_verses.isOptional(reference) or reference in footnotes.footnotedVerses:
-            reportError(f"Bracket or parens found in {reference}, a verse that is often footnoted", 43.1)
+        elif usfm_verses.isOptional(reference) or reference in state.footnotedVerses:
+            source_msg = state.source_id if state.source_id else "en_ulb"
+            reportError(f"Bracket or parens in {reference} ({source_msg} has a footnote there)", 43.1)
         else:
             reportError(f"Optional text or untagged footnote at {reference}", 43.2)
 
@@ -1392,7 +1420,6 @@ def main(app=None):
         else:
             reportStatus("No issues to report.")
         reportStatus("\nDone.")
-        sys.stdout.flush()
     if gui:
         gui.event_generate('<<ScriptEnd>>', when="tail")
 
