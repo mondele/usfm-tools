@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # Manages project-specific information.
+# Changes to the project info are held in memory until save() is called.
 # Project info can be saved to a json configuration file in parent folder of project directory.
-# FUTURE: Other parts of project info can be saved to a manifest.yaml file in project directory.
-# The contents of the two files partially overlap.
 # The config file is named according to the language code. Such as mgv.json.
 # If the json file already exists, it is loaded on ProjectInfo initialization.
-# Changes to the project info are held in memory until save() is called.
-# FUTURE: ProjectInfo manages manifest.yaml via the manifestyaml module, only when updateManifest() is called.
+# Other parts of project info can be saved to a manifest.yaml file in project directory.
+# The contents of the two files overlap.
+# ProjectInfo manages manifest.yaml via the manifestyaml module.
 
 import json
 import os
