@@ -76,6 +76,25 @@ class ManifestYaml:
             self.contents['dublin_core']['language']['title'] = name
             self.contents['dublin_core']['language']['direction'] = direction
 
+    # Returns (id, name, direction) tuple
+    def getLanguage(self):
+        if self.contents and 'dublin_core' in self.contents:
+            id = self.contents['dublin_core']['language']['identifier']
+            name = self.contents['dublin_core']['language']['title']
+            direction = self.contents['dublin_core']['language']['direction']
+            language = (id, name, direction)
+        else:
+            language = None
+        return language
+
+    # Returns the text identifier, like "ulb"
+    def getIdentifier(self):
+        if self.contents and 'dublin_core' in self.contents:
+            id = self.contents['dublin_core']['identifier']
+        else:
+            id = ""
+        return id
+
     # Sets the issued and modified dates to the specified value,
     # or to the current date if not specified.
     def setDates(self, date=None):
