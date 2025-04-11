@@ -460,7 +460,7 @@ def reportSuppressedIssues():
         if suppress[3]:
             issuesfile.write(f"    Punctuation.\n")
         if suppress[11]:
-            issuesfile.write(f"    Paragraphs missing final punctuation. (Only the total count was reported.)\n")
+            issuesfile.write(f"    Paragraph-final punctuation. (Only the total counts were reported.)\n")
         if suppress[2]:
             issuesfile.write(f"    Missing paragraph marker after chapter marker.\n")
         if suppress[4]:
@@ -476,7 +476,7 @@ def reportSuppressedIssues():
         if suppress[8]:
             issuesfile.write(f"    Upper case book titles.\n")
         if suppress[10]:
-            issuesfile.write(f"    First word in sentence not capitalized. (Only the total count was reported.)\n")
+            issuesfile.write(f"    Capitalization. (Only the total counts were reported.)\n")
         if suppress[12]:
             issuesfile.write(f"    Mixed case words.\n")
 
@@ -616,7 +616,7 @@ def load_source(fname):
             reportStatus(f"Loading source text...")
             scanSourceFile(sourcepath)
     if len(state.footnotedVerses) == 0:
-        state.footnotedVerses = footnotes.getFootnotedVerses()
+        state.footnotedVerses = footnotes.getFootnotedVerses(sourcedir)
 
 # Compares current verse to the source text
 # Returns Jaccard Similarity value, and number of words of length > 2 in common.
