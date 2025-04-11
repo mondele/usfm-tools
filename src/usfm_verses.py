@@ -556,5 +556,6 @@ def isOptional(ref, previous=False):
 'ACT 24:7', 'ACT 28:29', 'ROM 16:24', 'REV 12:18' }
 
 def isShortVerse(ref):
-    return ref in { 'LEV 11:15', 'EXO 20:13','EXO 20:14','EXO 20:15', 'DEU 5:17','DEU 5:18','DEU 5:19', \
-'JOB 3:2', 'JOB 9:1', 'JOB 12:1', 'JOB 16:1', 'JOB 19:1', 'JOB 21:1', 'JOB 27:1', 'JOB 29:1', 'LUK 20:30' }
+    return ref in { 'LEV 11:15', 'EXO 20:13','EXO 20:14','EXO 20:15', 'DEU 5:17','DEU 5:18','DEU 5:19',
+'JOB 3:2', 'JOB 9:1', 'JOB 12:1', 'JOB 16:1', 'JOB 19:1', 'JOB 21:1', 'JOB 27:1', 'JOB 29:1', 'LUK 20:30',
+'JHN 11:35' }
