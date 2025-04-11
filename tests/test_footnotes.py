@@ -24,9 +24,25 @@ def test_validSourceDir(dir, expected):
 @pytest.mark.parametrize('dir, expected',
     [(r'C:\DCS\EnglishTest', False),
      ('', False),
+     (r'C:\DCS\EnglishTest\Prescanned', True),
     ])
 def test_preScanned(dir, expected):
     assert footnotes.preScanned(dir) == expected
+
+def test_scanUnscanned():
+    dir = r'C:\DCS\EnglishTest\Unscanned'
+    assert footnotes.preScanned(dir) == False
+    footnotes.scanFootnotes(dir)
+    footnotedVerses = footnotes.getFootnotedVerses()
+    assert 'JHN 8.11' not in footnotedVerses
+
+def test_getPrescanned():
+    dir = r'C:\DCS\EnglishTest\Prescanned'
+    assert footnotes.preScanned(dir) == True
+    footnotedVerses = footnotes.getFootnotedVerses()    # no reference to dir
+    assert 'JHN 8:11' in footnotedVerses
+    footnotedVerses = footnotes.getFootnotedVerses(dir)
+    assert 'JHN 8:11' not in footnotedVerses
 
 @pytest.mark.parametrize('verse, expected',
     [('GEN 1:26', True),
