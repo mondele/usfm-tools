@@ -899,6 +899,7 @@ def takeV(vstr):
 reference_re = re.compile(r'[\d]+[\s]*:[\s]*[\d]+', re.UNICODE)
 bracketed_re = re.compile(r'\[ *([^\]]+) *\]', re.UNICODE)
 parenNumber_re = re.compile(r'\([\d, ]{0,11}\)')
+parenAmen_re = re.compile(r'\( *Am[ei]+n[ae\. ]*\)')
 
 # Returns None if nothing looking like a footnote occurs in the specified verse text.
 # In a verse that often has footnotes, even the presence of parens is flagged.
@@ -909,8 +910,9 @@ def findFootnote(text, reference):
         flag = ref.group(0)
     elif ('(' in text or ')' in text) and (usfm_verses.isOptional(reference) or reference in state.footnotedVerses):
         # Don't suspect numbers in parens as being a footnote
-        matches = parenNumber_re.findall(text)
-        if text.count('(') > len(matches):     # not every paren includes a simple number
+        matches1 = parenNumber_re.findall(text)
+        matches2 = parenAmen_re.findall(text)
+        if text.count('(') > len(matches1) + len(matches2):  # not every paren includes a simple number
             flag = '('
     elif "[" in text:
         fn = bracketed_re.search(text)
