@@ -53,6 +53,7 @@
 nIssues = 0
 projtype = ''
 manifestDir = None
+language_code = ""
 
 import configmanager
 from datetime import datetime
@@ -67,7 +68,7 @@ import re
 import usfm_verses
 
 # Returns language identifier based on the directory name
-def getLanguageId():
+def getLanguageFromDirName():
     global manifestDir
     parts = os.path.basename(manifestDir).split('_', 1)
     return parts[0]
@@ -322,11 +323,11 @@ def verifyCore(core):
     verifyIdentifier(core)  # Sets the projtype global
     if 'conformsto' in core and core['conformsto'] != 'rc0.2':
         reportError("Invalid value for conformsto: " + core['conformsto'])
+    verifyLanguage(core['language'])
     verifyContributors(core)
     verifyStringField(core, 'creator', 3)
     verifyDates(core['issued'], core['modified'])
     verifyFormat(core)
-    verifyLanguage(core['language'])
 
     pub = core['publisher']
     if core['language']['identifier'] != 'en':
@@ -446,10 +447,11 @@ def verifyLanguage(language):
         if language['direction'] != 'ltr' and language['direction'] != 'rtl':
             reportError("Incorrect language direction: " + language['direction'])
     if 'identifier' in language:
-        if language['identifier'] != getLanguageId():
-            reportError("Language identifier (" + language['identifier'] + ") does not match first part of directory name: " + os.path.basename(manifestDir))
-    if verifyStringField(language, 'title', 3):
+        global language_code
         language_code = language['identifier']
+        if language_code != getLanguageFromDirName():
+            reportWarning("Language identifier (" + language['identifier'] + ") does not match first part of directory name: " + os.path.basename(manifestDir))
+    if verifyStringField(language, 'language:title', 3):
         if language['title'].isascii() and not expectAscii(language_code):
             reportWarning("Remember to localize language title: " + language['title'])
 
@@ -661,7 +663,7 @@ def verifyRelation(rel):
             reportError("Invalid format for relation element: " + rel)
         else:
             global projtype
-            if parts[0] != getLanguageId() and parts[0] != "el-x-koine" and parts[0] != "hbo":
+            if parts[0] != language_code and parts[0] != "el-x-koine" and parts[0] != "hbo":
                 reportWarning("Non-matching language code for relation element: " + rel)
             if parts[1] not in {'obs','obs-tn','obs-tq','obs-sn','obs-sq','tn','tq','tw','ta','tm'} and not isBibleType(parts[1]):
                 if parts[1][0:4] != 'ugnt' and parts[1][0:3] != 'uhb':
@@ -713,7 +715,7 @@ def verifySource(source):
             reportError("Invalid source:identifier (need lower case ascii, no spaces): " + dict['identifier'])
         if dict['language'] == 'English':
             reportError("Use a language code in source:language, not \'" + dict['language'] + '\'')
-        elif dict['language'] == getLanguageId():
+        elif dict['language'] == language_code:
             reportWarning("source:language matches target language")
         elif dict['language'] not in {'en','hbo','el-x-koine'}:
             reportWarning("source:language: " + dict['language'])
@@ -728,8 +730,7 @@ def verifyStringField(dict, key, minlength):
             reportError("Value must be a string: " + key + ": " + str(dict[key]))
             success = False
         elif len(dict[key]) < minlength:
-            reportError("Invalid value for " + key + ": " + dict[key])
-            success = False
+            reportWarning("Short value for " + key + ": " + dict[key])
     return success
 
 # Validates the subject field
@@ -827,7 +828,7 @@ def verifyYamls(folderpath):
     if contents := yamlcontents(folderpath, "toc.yaml"):
         try:
             nAsciiTitles = verifyTocYaml(contents, "toc.yaml")
-            if nAsciiTitles > 0 and not expectAscii(getLanguageId()):
+            if nAsciiTitles > 0 and not expectAscii(language_code):
                 reportWarning(f"{nAsciiTitles} likely untranslated titles in toc.yaml")
         except TypeError as e:
             reportError(f"Syntax error in toc.yaml: \"{str(e)}.\"")
