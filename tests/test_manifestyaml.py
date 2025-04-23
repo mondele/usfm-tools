@@ -39,6 +39,11 @@ def init_newfile():
     my2 = ManifestYaml()
     assert my2.load(dir) == []
     assert my2.contents['dublin_core']['language']['title'] == language_name
+    language = my2.getLanguage()
+    assert language[0] == language_code
+    assert my2.getLanguageId() == language_code
+    assert language[1] == language_name
+    assert my2.getResourceId() == 'reg'     # default value
 
 # Creates a new manifest file, with contributors.
 def addContributors():

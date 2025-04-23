@@ -87,8 +87,16 @@ class ManifestYaml:
             language = None
         return language
 
+    # Returns the language id found in the manifest, or ""
+    def getLanguageId(self):
+        languageId = ""
+        language = self.getLanguage()
+        if language:
+            languageId = language[0]
+        return languageId
+
     # Returns the text identifier, like "ulb"
-    def getIdentifier(self):
+    def getResourceId(self):
         if self.contents and 'dublin_core' in self.contents:
             id = self.contents['dublin_core']['identifier']
         else:
