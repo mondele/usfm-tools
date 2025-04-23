@@ -12,6 +12,7 @@ import g_step
 import os
 import time
 from projectinfo import ProjectInfo
+from manifestyaml import ManifestYaml
 
 stepname = 'VerifyUSFM'   # equals the main class name in this module
 
@@ -338,11 +339,31 @@ class VerifyUSFM_Frame(g_step.Step_Frame):
     # Returns the most reasonable new value for compare_dir,
     # based on existence of valid project info, if any.
     def _getCompareValue(self, dir, language_code, cmp):
-        if dir and language_code and (not cmp or cmp.startswith("(locate")):
-            if os.path.isdir(dir):
-                projectInfo = ProjectInfo(dir, language_code)
-                if src := projectInfo.getMainSource():
-                    cmp = f"(locate folder containing {src['language_id']}_{src['resource_id']}, vrsn ~{src['version']})"
-                elif cmp:
+        newsrc = None
+        if language_code and dir and os.path.isdir(dir):
+            projectInfo = ProjectInfo(dir, language_code)
+            if not cmp or cmp.startswith("(locate"):
+                newsrc = projectInfo.getMainSource()
+                if not newsrc:
                     cmp = ""
+            else:   # cmp is already set to a folder
+                # See whether current cmp matches a possible source for the current language
+                cmpYaml = ManifestYaml()
+                errors = cmpYaml.load(cmp)
+                if not errors:
+                    cmpLangId = cmpYaml.getLanguageId()
+                    cmpRsrcId = cmpYaml.getResourceId()
+                    match = False
+                    sources = projectInfo.getSources()
+                    for source in sources:
+                        if source['language_id'] == cmpLangId and source['resource_id'] == cmpRsrcId:
+                            match = True
+                            break   # good, the current cmp value is good
+                    if not match:
+                        if sources:
+                            newsrc = sources[0]
+                        else:
+                            cmp = ""
+        if newsrc:
+            cmp = f"(locate folder containing {newsrc['language_id']}_{newsrc['resource_id']}, vrsn ~{newsrc['version']})"
         return cmp
