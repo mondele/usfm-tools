@@ -454,7 +454,7 @@ def reportSuppressedIssues():
             any = True
     if any:
         issuesfile = openIssuesFile()
-        issuesfile.write(f"But these kind(s) of warnings were suppressed:\n")
+        issuesfile.write(f"But these kinds of warnings were suppressed:\n")
         if suppress[1]:
             issuesfile.write(f"    Irregular numbers.\n")
         if suppress[3]:
@@ -518,7 +518,7 @@ def dumpWords():
             os.remove(oldpath)
     if hapaxcount > 0 and not config['filename']:
         percent = int(hapaxcount * 100 / len(wordlist))
-        reportError(f"{hapaxcount} hapax legomena out of {len(wordlist)} words. ({percent}%)", 0.2)
+        reportError(f"{len(wordlist)} unique words. {hapaxcount} ({percent}%) of them occur only once.", 0.2)
 
 trans = str.maketrans('', '', "'’\"-_()–&")
 
@@ -588,11 +588,7 @@ def scanSourceFile(path):
 def identifySource(sourcedir):
     my = ManifestYaml()
     my.load(sourcedir)
-    language = my.getLanguage() # tuple of (id, name, direction)
-    if language:
-        id = language[0] + "_" + my.getIdentifier()
-    else:
-        id = ""
+    id = my.getLanguageId() + "_" + my.getResourceId()
     return id
 
 # Loads the source text for the current book if compare_dir is set.
