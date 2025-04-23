@@ -290,7 +290,7 @@ def remove_parens(str):
         str = str.strip(' ()\n')
     return str
 
-chapter_re = re.compile(r'\\c +([0-9]+)[ \n]*', re.UNICODE)
+chapter_re = re.compile(r'\\c\s+([0-9]+)[\s]*', re.UNICODE)
 
 # Searches for likely section heading at the beginning of a section,
 # before the first verse marker.
@@ -368,16 +368,23 @@ def mark_section_headings(section, lastchunk):
         section = mark_section_heading_lbi(section, lastchunk)
     return section
 
-# Adds chapter label and paragraph marker as needed.
+verse1_re = re.compile(r'([\\p\s]*)\\v\s+1[\s]')
+
+# Inserts chapter label if needed.
 # Returns modified section.
 def augmentChapter(section, chapterTitle):
     chap = chapter_re.search(section)
     if chap:
+        clstr = ""
         if chapterTitle.strip() != chap.group(1):
-            clpstr = "\n\\cl " + chapterTitle.strip() + "\n\\p\n"
-        else:
-            clpstr = "\n\\p\n"
-        section = section[:chap.end()].rstrip() + clpstr + section[chap.end():].lstrip()
+            clstr = "\n\\cl " + chapterTitle.strip()
+        section = section[:chap.end()].rstrip() + clstr + "\n" + section[chap.end():].lstrip()
+    # Ensure \p before verse 1
+    if v1 := verse1_re.search(section):
+        if not v1.group(1).endswith("\\p\n"):
+            preceding = v1.group(1)
+            ipos = v1.start() + len(preceding)
+            section = section[:ipos] + "\\p\n" + section[ipos:]
     return section
 
 spacedot_re = re.compile(r'[^0-9] [.?!;:,][^\.]')    # space before clause-ending punctuation
