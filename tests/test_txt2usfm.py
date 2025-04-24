@@ -7,8 +7,9 @@ tests_path = os.path.dirname(os.path.realpath(__file__))
 src_path = os.path.join(os.path.dirname(tests_path), "src")
 sys.path.append(src_path)
 import pytest
+import txt2USFM
 
-@pytest.mark.parametrize('str, newstr',
+@pytest.mark.parametrize('section, newstr',
     [
         ('', ''),
         ('The house.about.', ''),
@@ -18,13 +19,12 @@ import pytest
         ('\n\n\\c 8 \\v 8', '\n\n\\s5\n\\c 8 \\v 8'),
         (' \\v 7 \\c 7', ' \\s5\n\\v 7 \\c 7'),
     ])
-def test_mark_chunk(str, newstr):
-    import txt2USFM
+def test_mark_chunk(section, newstr):
     if not newstr:
-        newstr = str
-    assert txt2USFM.mark_chunk(str) == newstr
+        newstr = section
+    assert txt2USFM.mark_chunk(section) == newstr
 
-@pytest.mark.parametrize('str, newstr',
+@pytest.mark.parametrize('section, newstr',
     [
         ('', ''),
         ('This Fine House', '\\s This Fine House\n\\p\n'),
@@ -55,13 +55,12 @@ def test_mark_chunk(str, newstr):
         ('\\c 5\nOkhuwuulira Khu lugulu\n\\v 1 Yesu ni kawona ', ''),   # last word uncapitalized
         ('\\c 1 Silsilah Yesus Kristus \\v 1 Kitab silsilah Yesus', '\\c 1\n\\s Silsilah Yesus Kristus\n\\p\n\\v 1 Kitab silsilah Yesus')
     ])
-def test_mark_section_heading_bos(str, newstr):
-    import txt2USFM
+def test_mark_heading_bos(section, newstr):
     if not newstr:
-        newstr = str
-    assert txt2USFM.mark_section_heading_bos(str) == newstr
+        newstr = section
+    assert txt2USFM.mark_section_heading_bos(section) == newstr
 
-@pytest.mark.parametrize('str, wanted',
+@pytest.mark.parametrize('section, wanted',
     [
         ('', ''),
         ('This Fine House', '\\s This Fine House\n\\p\n'),
@@ -88,32 +87,32 @@ def test_mark_section_heading_bos(str, newstr):
         ('\\v 3 Here is a verse. Here Is A Candidate \\f + \\ft Footnote \\f*', ''),
         ('mu syaki syange.’” Olukaado Lw’omuyofu', 'mu syaki syange.’”\n\\s Olukaado Lw’omuyofu\n\\p\n'),
     ])
-def test_mark_section_heading_eos(str, wanted):
-    import txt2USFM
+def test_mark_heading_eos(section, wanted):
     if not wanted:
-        wanted = str
-    assert txt2USFM.mark_section_heading_eos(str) == wanted
+        wanted = section
+    assert txt2USFM.mark_section_heading_eos(section) == wanted
 
-@pytest.mark.parametrize('str, expected',
+@pytest.mark.parametrize('section, expected',
     [
         ('', ''),
         ('This Fine House', '\\s This Fine House\n\\p\n'),
         ('   Spaces ', '\\s Spaces\n\\p\n'),
         ('\\c 1 \\v 1 verse one.\nThis Is A Section\n\\v 2 second.', '\\c 1 \\v 1 verse one.\n\\s This Is A Section\n\\p\n\\v 2 second.'),
-        ('\\v 3 verse three.\n This Is Exclamation!  \n\\v 4', ''),
+        ('\\v 3 verse three.\n This Is Exclamation!  \n\\v 4', '\\v 3 verse three.\n\\s This Is Exclamation!\n\\p\n\\v 4'),
         (' This Fine House\n\\v 4 asdf', '\\s This Fine House\n\\p\n\\v 4 asdf'),
         ('Heading One\n\\v 5 asdf\nHeading Two\nHeading Three', '\\s Heading One\n\\p\n\\v 5 asdf\nHeading Two\nHeading Three'),
         (' This Fine \\ House\n\\v 6 asdf', ''),
         ('\\v 7 asdf\n  Heading At End ', '\\v 7 asdf\n\\s Heading At End\n\\p\n'),
         ('wakiiye awo.\nOkhulangiwa Khwa Matayo\n\\v 9 Nga Yesu lukali', 'wakiiye awo.\n\\s Okhulangiwa Khwa Matayo\n\\p\n\\v 9 Nga Yesu lukali')
     ])
-def test_mark_section_heading_lbi_1(str, expected):
-    import txt2USFM
+def test_mark_heading_lbi_1(section, expected):
+    # Tests for heading recognition in a line-by-itself, NOT at the end of a chapter
     if not expected:
-        expected = str
-    assert txt2USFM.mark_section_heading_lbi(str, False) == expected
+        expected = section
+    result = txt2USFM.mark_section_heading_lbi(section, False)
+    assert result == expected
 
-@pytest.mark.parametrize('str, expected',
+@pytest.mark.parametrize('section, expected',
     [
         ('', ''),
         ('This Fine House', ''),
@@ -126,13 +125,13 @@ def test_mark_section_heading_lbi_1(str, expected):
         (' This Fine \\ House\n\\v 6 asdf', ''),
         ('\\v 7 asdf\n  Heading At End ', ''),
     ])
-def test_mark_section_heading_lbi_2(str, expected):
-    import txt2USFM
+def test_mark_heading_lbi_2(section, expected):
+    # Tests for heading recognition in a line-by-itself at the end of a chapter
     if not expected:
-        expected = str
-    assert txt2USFM.mark_section_heading_lbi(str, True) == expected
+        expected = section
+    assert txt2USFM.mark_section_heading_lbi(section, True) == expected
 
-@pytest.mark.parametrize('str, newstr',
+@pytest.mark.parametrize('section, newstr',
     [
         ('', ''),
         ('This Fine House', '\\s This Fine House\n\\p\n'),
@@ -178,13 +177,12 @@ def test_mark_section_heading_lbi_2(str, expected):
         ('\\v 7 Kiru YâkoboEsepo? (Jesus Christ)', '\\v 7 Kiru YâkoboEsepo?\n\\s Jesus Christ\n\\p\n'),
     ])
 # Call mark_section_headings() with the lastchunk parameter False
-def test_mark_section_headings_1(str, newstr):
-    import txt2USFM
+def test_mark_section_headings_1(section, newstr):
     if not newstr:
-        newstr = str
-    assert txt2USFM.mark_section_headings(str, False) == newstr
+        newstr = section
+    assert txt2USFM.mark_section_headings(section, False) == newstr
 
-@pytest.mark.parametrize('str, newstr',
+@pytest.mark.parametrize('section, newstr',
     [
         ('', ''),
         ('This Fine House', '\\s This Fine House\n\\p\n'),
@@ -207,13 +205,12 @@ def test_mark_section_headings_1(str, newstr):
     ])
 # Call mark_section_headings() with the lastchunk parameter True,
 # in which case, mark_section_headings() doesn't look for section heading at end of section.
-def test_mark_section_headings_2(str, newstr):
-    import txt2USFM
+def test_mark_section_headings_2(section, newstr):
     if not newstr:
-        newstr = str
-    assert txt2USFM.mark_section_headings(str, True) == newstr
+        newstr = section
+    assert txt2USFM.mark_section_headings(section, True) == newstr
 
-@pytest.mark.parametrize('str, expected',
+@pytest.mark.parametrize('s, expected',
     [
         (None, None),
         ('', ''),
@@ -227,8 +224,24 @@ def test_mark_section_headings_2(str, newstr):
         ('   ends with Parens)', ''),
         ('(  spaces involved )  ', 'spaces involved'),
     ])
-def test_remove_parens(str, expected):
-    import txt2USFM
+def test_remove_parens(s, expected):
     if not expected:
-        expected = str
-    assert txt2USFM.remove_parens(str) == expected
+        expected = s
+    assert txt2USFM.remove_parens(s) == expected
+
+@pytest.mark.parametrize('section, ctitle, expected',
+    [
+        ('', 'Pasal 1', ''),
+        ('This Fine House', 'Pasal', ''),
+        ('\n\\c 1\n\\s DER ARKEMA SIN\n\\p\n\\v 1 Der nom.\n\\v 2 Taurat\n', 'Pasal 1', '\n\\c 1\n\\cl Pasal 1\n\\s DER ARKEMA SIN\n\\p\n\\v 1 Der nom.\n\\v 2 Taurat\n'),
+        ('\\c 1\n\\s DER ARKEMA SIN\n\\p\n\\v 1 Der nom.', 'Pasal 1', '\\c 1\n\\cl Pasal 1\n\\s DER ARKEMA SIN\n\\p\n\\v 1 Der nom.'),
+        ('\\c 2\n\\v 1 asdf', 'Pasal 2', '\\c 2\n\\cl Pasal 2\n\\p\n\\v 1 asdf'),
+        ('\\c 3\n\\v 1 asdf', '3', '\\c 3\n\\p\n\\v 1 asdf'),
+        ('\\c 4\n\\v 1 asdf', 'Pasal', '\\c 4\n\\cl Pasal\n\\p\n\\v 1 asdf'),
+        ('\\c 5', 'Pasal 5', '\\c 5\n\\cl Pasal 5\n'),
+    ])
+def test_augmentChapter(section, ctitle, expected):
+    if not expected:
+        expected = section
+    result = txt2USFM.augmentChapter(section, ctitle)
+    assert result == expected
