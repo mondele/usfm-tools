@@ -3,12 +3,12 @@
 # Saves the list in the source_dir folder in a file named footnotedVerses.json.
 
 # Global variables
-source_dir = r'C:\DCS\English\en_ulb.lversaw'
+source_dir = r'C:\DCS\English\en_udb.paragraphs'
 
 import sys
 import footnotes
 
 if footnotes.validSourceDir(source_dir):
-    footnotes.scanFootnotes(source_dir)
+    footnotes.getFootnotedVerses(source_dir)
 else:
     sys.stderr.write(f"Invalid source folder: {source_dir}\n")
