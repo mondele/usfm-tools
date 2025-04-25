@@ -338,6 +338,7 @@ def mark_section_heading_eos(section):
 lbi_re = re.compile(r'^[^\\\n]+$', re.MULTILINE)
 
 # Marks likely section heading on a line by itself.
+# lastchunk specifies whether the section is the last chunk in a chapter.
 def mark_section_heading_lbi(section, lastchunk):
     lbi = lbi_re.search(section)
     while lbi:
@@ -556,8 +557,10 @@ def getBookTitle(folder):
         path = os.path.join(folder, "00/title.txt")
     if os.path.isfile(path):
         with io.open(path, "tr", 1, encoding='utf-8-sig') as f:
-            bookTitle = f.readline().strip()
-        bookTitle = bookTitle.rstrip(". ")
+            lines = f.readlines()
+        for line in lines:
+            if bookTitle := line.strip().rstrip("."):
+                break
         bookTitle = " ".join(bookTitle.split())  # eliminates consecutive spaces
         if not bookTitle.istitle():
             bookTitle = bookTitle.title().replace("Iii", 'III')
