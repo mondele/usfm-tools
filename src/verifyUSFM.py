@@ -32,6 +32,7 @@ listener = None
 issuesFile = None
 issues: dict = {}   # Can't put in State because we want to accumulate issues across all files.
 wordlist = dict()
+footnotedVerses = {}
 
 import configmanager
 import os
@@ -65,8 +66,10 @@ class State:
         self.reference = ""
         self.errorRefs = set()
         self.sourcetext = {}    # a dict, indexed by verse reference
+        self.sourcefootnote = {}    # a dict, indexed by verse reference
+        self.booklength_src = 1
+        self.booklength = 1
         self.canContinue = True
-        self.footnotedVerses = {}
         self.source_id = ""
         self.initBook()
 
@@ -87,7 +90,6 @@ class State:
         self.needQQ = False
         self.needVerseText = False
         self.inVerse = False
-        self.textLength = 0
         self.versetext = ""
         self.asciiVerse = True
         self.textOkayHere = False
@@ -116,6 +118,7 @@ class State:
         self.ID = id
         if scan:
             self.sourcetext.clear()
+            self.sourcefootnote.clear()
         elif id:
             self.IDs.append(id)
 
@@ -207,7 +210,6 @@ class State:
         self.verse = int(v)
         self.needVerseText = True
         self.inVerse = True
-        self.textLength = 0
         self.versetext = ""
         self.textOkayHere = True
         self.lastRef = self.reference
@@ -246,23 +248,17 @@ class State:
         return self.sentenceEnd
 
     def getTextLength(self):
-        return self.textLength
+        return len(self.versetext)
 
     def addText(self, text):
         self.prevItemCategory = self.currItemCategory
         self.currItemCategory = OTHER
         self.needVerseText = False
-        if text not in '-+':
-            self.textLength += len(text)
+        if text and text not in '-+':
             self.versetext += text + " "
         self.textOkayHere = True
         if not text.isascii():
           self.asciiVerse = False
-
-#    def footnotes_started(self):
-#        return self.footnote_starts
-#    def footnotes_ended(self):
-#        return self.footnote_ends
 
     def inFootnote(self):
         return self.footnote_starts > self.footnote_ends or self.endnote_starts > self.endnote_ends
@@ -301,6 +297,12 @@ class State:
             state.sourcetext[state.reference] += " " + t
         else:
             state.sourcetext[state.reference] = t
+
+    def addSourceFootnote(self, t):
+        if self.reference in self.sourcefootnote:
+            state.sourcefootnote[state.reference] += " " + t
+        else:
+            state.sourcefootnote[state.reference] = t
 
     # Adds the specified reference to the set of error references
     # Returns True if reference can be added
@@ -571,7 +573,7 @@ def scan(token):
     elif token.isID():
         state.addID(token.value[0:3].upper(), scan=True)
     elif isFootnote(token):
-        state.addSourceText(token.value)
+        state.addSourceFootnote(token.value)
 
 # Parses the source text into a Python data structure.
 def scanSourceFile(path):
@@ -583,6 +585,7 @@ def scanSourceFile(path):
     tokens = parseUsfm.parseString(contents)
     for token in tokens:
         scan(token)
+    state.booklength_src = len(contents)
 
 # Returns the language code and identifier as a string
 def identifySource(sourcedir):
@@ -593,26 +596,41 @@ def identifySource(sourcedir):
 
 # Loads the source text for the current book if compare_dir is set.
 # Slow operation, it parses a usfm file and stores verse text in a dict.
-# @TODO combine the source text loading in this function with footnotes.scanFootnotes()
 def load_source(fname):
+    global footnotedVerses
     sourcedir = config['compare_dir']
     if sourcedir:
         state.source_id = identifySource(sourcedir)
 
         # Load footnote references first, for the whole directory
-        if not footnotes.preScanned(sourcedir):
-            reportStatus(f"Please wait a minute or two while the source text is scanned\n\
+        if len(footnotedVerses) == 0:
+            if not footnotes.preScanned(sourcedir):
+                reportStatus(f"Please wait a minute or two while the source text is scanned\n\
   for footnotes. This is a one time operation since\n\
   the results are saved in a file.")
-            footnotes.scanFootnotes(sourcedir)
+            footnotedVerses = footnotes.getFootnotedVerses(sourcedir)
 
         # Then parse the usfm for the current book.
         sourcepath = os.path.join(sourcedir, fname)
         if os.path.isfile(sourcepath):
             reportStatus(f"Loading source text...")
             scanSourceFile(sourcepath)
-    if len(state.footnotedVerses) == 0:
-        state.footnotedVerses = footnotes.getFootnotedVerses(sourcedir)
+
+psalmv1_re = re.compile(r'PSA \d+:1$')
+
+# Returns True if the translated verse if much shorter than it should be.
+# Based on (1) length of verse in source text, or (2) list of short verses.
+# Overall book length is also factored in.
+# Verse 1 of every Psalm is given a pass.
+def shortened_verse(ref):
+    shortened = False
+    if not psalmv1_re.match(ref) and state.sourcetext and state.reference in state.sourcetext:
+        sourcelength = len(state.sourcetext[state.reference])
+        if sourcelength > 0 and state.getTextLength() / sourcelength < (0.4 * state.booklength / state.booklength_src):
+            shortened = True
+    elif state.getTextLength() < 12 and not usfm_verses.isShortVerse(state.reference):
+        shortened  = True
+    return shortened
 
 # Compares current verse to the source text
 # Returns Jaccard Similarity value, and number of words of length > 2 in common.
@@ -621,19 +639,23 @@ def similarToSource():
     n = 0
     if state.sourcetext and state.reference in state.sourcetext:
         A = set(state.sourcetext[state.reference].split())
+        if state.reference in state.sourcefootnote:
+            A.update(state.sourcefootnote[state.reference].split())
         B = set(state.versetext.split())
         wordsincommon = [w for w in A&B if len(w) > 2 and w.islower()]
         n = len(wordsincommon)
         similarity = n / len(A|B)
     return (similarity, n)
 
-# Report missing text or all ASCII text, in previous verse
+# Report empty verse, verse fragment or all ASCII text, in previous verse
 def previousVerseCheck():
-    if not usfm_verses.isOptional(state.reference) and state.getTextLength() < 11 and state.verse != 0:
+    empty = False
+    if not usfm_verses.isOptional(state.reference) and state.getTextLength() < 12 and state.verse != 0:
         if state.getTextLength() == 0:
             reportError("Empty verse: " + state.reference, 1)
-        elif not usfm_verses.isShortVerse(state.reference):
-            reportError("Verse fragment: " + state.reference, 2)
+            empty = True
+    if not empty and shortened_verse(state.reference):
+        reportError(f"Translation is very short compared to source: {state.reference}", 2)
     if not suppress[9] and state.asciiVerse and state.getTextLength() > 0:
         reportError("Verse is entirely ASCII: " + state.reference, 3)
     (sim, n) = similarToSource()
@@ -901,10 +923,11 @@ parenAmen_re = re.compile(r'\( *Am[ei]+n[ae\. ]*\)')
 # In a verse that often has footnotes, even the presence of parens is flagged.
 # Returns the flag character or string that starts the possible footnote.
 def findFootnote(text, reference):
+    global footnotedVerses
     flag = None
     if ref := reference_re.search(text):
         flag = ref.group(0)
-    elif ('(' in text or ')' in text) and (usfm_verses.isOptional(reference) or reference in state.footnotedVerses):
+    elif ('(' in text or ')' in text) and (usfm_verses.isOptional(reference) or reference in footnotedVerses):
         # Don't suspect numbers in parens as being a footnote
         matches1 = parenNumber_re.findall(text)
         matches2 = parenAmen_re.findall(text)
@@ -928,12 +951,13 @@ def validBracketedFootnote(text):
 # Looks for possible verse references and footnotes in the text.
 # This function is only called when parsing a piece of verse text.
 def reportFootnotes(text):
+    global footnotedVerses
     reference = state.reference
     if trigger := findFootnote(text, reference):
         if ':' in trigger:
             if not validBracketedFootnote(text):
                 reportError(f"Probable chapter:verse reference ({trigger}) at {reference} belongs in a footnote", 43)
-        elif usfm_verses.isOptional(reference) or reference in state.footnotedVerses:
+        elif usfm_verses.isOptional(reference) or reference in footnotedVerses:
             source_msg = state.source_id if state.source_id else "en_ulb"
             reportError(f"Bracket or parens in {reference} ({source_msg} has a footnote there)", 43.1)
         else:
@@ -1331,6 +1355,7 @@ def verifyFile(path):
     state.setAlignedUsfm("lemma=" in contents or "x-occurrences" in contents)
     if state.aligned_usfm:
         contents = usfm_utils.unalign_usfm(contents)
+    state.booklength = len(contents)
 
     state.canContinue = True
 
@@ -1396,6 +1421,8 @@ def main(app=None):
         state = State()
         global issues
         issues = dict()
+        global footnotedVerses
+        footnotedVerses.clear()
 
         file = config['filename']
         if file:
