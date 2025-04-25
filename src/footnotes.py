@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 # Support for footnotes
+# There are only a few external functions:
+#   getFootnotedVerses(dir="")
+#   reset()
+#   validSourceDir(dir) -- safe to use, but should not be necessary to use, except by unit tests
+#   preScanned(dir) -- safe to use, but should not be necessary to use, except by unit tests
 
 import os
 import io
@@ -398,6 +403,11 @@ _footnotedVerses_en_ulb = [
   "REV 22:19",
   "REV 22:21"]
 
+# Resets to initial state, where no footnote references have been loaded.
+def reset():
+    global state
+    state = None
+
 # Returns True if the specified folder contains any USFM files.
 def validSourceDir(dir):
     valid = False
@@ -410,48 +420,60 @@ def validSourceDir(dir):
     return valid
 
 # Returns True if the specified folder has already been scanned for footnote locations.
+# @TODO Check for .usfm file dates newer than the .json date. (Maybe a separate function.)
 def preScanned(dir):
     fvpath = os.path.join(dir, "footnotedVerses.json")
     return os.path.isfile(fvpath)
 
 # Returns the set of footnoted verses found in the usfm files in dir.
-# If no value for dir, returns the default set, which is from English UDB.
+# If no value for dir, returns the current set, if any, or the default set, which is from English UDB.
 def getFootnotedVerses(dir=""):
     global state
-    if validSourceDir(dir):
-        scanFootnotes(dir)
-    elif not state or not state.footnoteRefs:
+    if not state:
+        state = State()
+    if preScanned(dir):
+        _loadPrescanned(dir)
+    elif validSourceDir(dir):
+        _scanFootnotes(dir)
+    if not state.footnoteRefs:
         state = State()
         state.footnoteRefs = _footnotedVerses_en_ulb
+        state.loadedDir = ""
     return set(state.footnoteRefs)
 
 # Loads the pre-scanned set of footnoted verses if possible.
-# Otherwise, scans all USFM files in the specified folder and saves the results.
-# In either case, state.footnoteRefs is properly set upon exit.
-def scanFootnotes(dir):
+# Sets state.footnoteRefs and state.loadedDir, or leaves them unchanged.
+def _loadPrescanned(dir):
     global state
-    state = State()
-    fvpath = os.path.join(dir, "footnotedVerses.json")
-    if os.path.isfile(fvpath):
-        with io.open(fvpath, 'r') as json_file:
-            state.footnoteRefs = json.load(json_file)
-    elif os.path.isdir(dir):
-        processDir(dir)
-        _saveReferences(fvpath)
+    if dir != state.loadedDir:
+        fvpath = os.path.join(dir, "footnotedVerses.json")
+        if os.path.isfile(fvpath):
+            with io.open(fvpath, 'r') as json_file:
+                state.footnoteRefs = json.load(json_file)
+            state.setLoadedDir(dir)
+
+# Scans all USFM files in the specified folder and saves the results.
+# Sets state.footnoteRefs and state.loadedDir, or leaves them unchanged.
+def _scanFootnotes(dir):
+    global state
+    state.footnoteRefs.clear()
+    if os.path.isdir(dir):
+        _processDir(dir)
+        state.setLoadedDir(dir)
+        _saveReferences( os.path.join(dir, "footnotedVerses.json") )
 
 # Scans the usfm files in the specified folder only.
-def processDir(dirpath):
+def _processDir(dirpath):
+    global state
     with os.scandir(dirpath) as it:
         for entry in it:
             if entry.name.lower().endswith('sfm') and entry.is_file():
                 state.canContinue = True
-                processFile(entry.path)
+                _processFile(entry.path)
 
 # Appends the footnoted verse references from the specified file to state.footnoteRefs.
-def processFile(path):
+def _processFile(path):
     global state
-    if not state:
-        state = State()
     state.canContinue = True
     # print(f"Processing {path}")
     # sys.stdout.flush
@@ -461,7 +483,7 @@ def processFile(path):
         contents = usfm_utils.unalign_usfm(contents)
 
     for token in parseUsfm.parseString(contents):
-        take(token)
+        _take(token)
         if not state.canContinue:
             break
     state.addID("")
@@ -471,35 +493,35 @@ def isFootnote(token):
     # return token.isF_S() or token.isF_E() or token.isFR() or token.isFR_E() or token.isFT() or token.isFP() or token.isFE_S() or token.isFE_E()
     return token.isF_S() or token.isF_E()
 
-def take(token):
+def _take(token):
     if isFootnote(token):
         state.addFootnote()
     if token.isID():
-        takeID(token.value)
+        _takeID(token.value)
     elif token.isC():
         if not state.ID:        # means this usfm file is invalid
-            reportError("Missing book ID: " + state.reference)
+            _reportError("Missing book ID: " + state.reference)
             state.canContinue = False
-        takeC(token.value)
+        _takeC(token.value)
     elif token.isV():
-        takeV(token.value)
+        _takeV(token.value)
 
-def takeID(id):
+def _takeID(id):
     if len(id) < 3:
-        reportError("Invalid ID: " + id)
+        _reportError("Invalid ID: " + id)
     id = id[0:3].upper()
     if id in state.getIDs():
-        reportError("Duplicate ID: " + id)
+        _reportError("Duplicate ID: " + id)
     state.addID(id)
 
-def takeC(c):
+def _takeC(c):
     state.addChapter(c)
 
 vv_re = re.compile(r'([0-9]+)-([0-9]+)')
 
 # Receives a string containing a verse number or range of verse numbers.
 # Reports errors related to the verse number(s), such as missing or duplicated verses.
-def takeV(vstr):
+def _takeV(vstr):
     vlist = []
     if vstr.find('-') > 0:
         vv_range = vv_re.search(vstr)
@@ -510,7 +532,7 @@ def takeV(vstr):
                 vlist.append(vn)
                 vn += 1
         else:
-            reportError("Problem in verse range near " + state.reference)
+            _reportError("Problem in verse range near " + state.reference)
     else:
         vlist.append(int(vstr))
 
@@ -519,7 +541,7 @@ def takeV(vstr):
         state.addVerse(str(vn))
 
 # Writes error message to stderr and to issues.txt.
-def reportError(msg):
+def _reportError(msg):
     try:
         sys.stderr.write(msg + "\n")
     except UnicodeEncodeError as e:
@@ -535,6 +557,10 @@ class State:
         self.reference = ""
         self.footnoteRefs = list()
         self.canContinue = True
+        self.loadedDir = None
+
+    def setLoadedDir(self, dir):
+        self.loadedDir = dir
 
     # Resets state data for a new book
     def addID(self, id):
