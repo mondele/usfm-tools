@@ -138,8 +138,8 @@ class ManifestYaml:
 
     # Converts contributor to title case and adds it to the list, if unique.
     def addContributor(self, contributor):
-        candidate = contributor.title()
-        if not candidate in self.contents['dublin_core']['contributor']:
+        candidate = contributor.title().strip()
+        if candidate and not candidate in self.contents['dublin_core']['contributor']:
             self.contents['dublin_core']['contributor'].append(candidate)
 
     # Appends or replaces the specified project

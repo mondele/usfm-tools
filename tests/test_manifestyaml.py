@@ -60,6 +60,7 @@ def addContributors():
     con = my.contents['dublin_core']['contributor'][1]
     assert con == 'O\'Shea'
     my.addContributor('Allen')
+    my.addContributor('     ')  # empty contributors should not be saved
     my.save()
     my2 = ManifestYaml()
     my2.load(dir)
